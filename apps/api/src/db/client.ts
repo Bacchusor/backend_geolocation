@@ -15,6 +15,28 @@ export function createDb(databaseUrl: string, poolMax = 10): { db: Db; pool: pg.
   return { db, pool };
 }
 
+/** Wait until the database accepts connections (Postgres restarts once while initialising a fresh volume). */
+export async function waitForDb(
+  db: Db,
+  log?: Logger,
+  attempts = 30,
+  delayMs = 2000,
+): Promise<void> {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      await db.execute(sql`SELECT 1`);
+      return;
+    } catch (err) {
+      if (i === attempts) throw err;
+      log?.warn(
+        { attempt: i, err: err instanceof Error ? err.message : String(err) },
+        'database not ready, retrying',
+      );
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
 /** Idempotent: drizzle tracks applied migrations in __drizzle_migrations. */
 export async function runMigrations(db: Db, log?: Logger): Promise<void> {
   const here = dirname(fileURLToPath(import.meta.url));

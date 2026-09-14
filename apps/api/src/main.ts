@@ -1,6 +1,6 @@
 import { loadConfig } from './config.js';
 import { createLogger } from './logger.js';
-import { createDb, runMigrations } from './db/client.js';
+import { createDb, runMigrations, waitForDb } from './db/client.js';
 import { SecretBox } from './crypto.js';
 import { buildApp } from './http/app.js';
 import { Evaluator } from './services/evaluation.js';
@@ -18,6 +18,7 @@ async function main() {
   const log = createLogger(config);
   const { db, pool } = createDb(config.DATABASE_URL, config.DB_POOL_MAX);
 
+  await waitForDb(db, log);
   if (config.RUN_MIGRATIONS) await runMigrations(db, log);
 
   const secrets = new SecretBox(config.ENCRYPTION_KEY);

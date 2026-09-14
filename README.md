@@ -100,7 +100,7 @@ Migrations: edit `apps/api/src/db/schema.ts`, run `pnpm --filter @georeminder/ap
 Images are multi-arch (amd64 + arm64) and published by CI to `ghcr.io/bacchusor/georeminder-{api,admin}`
 with tags `pre` (main), `<branch>` and `sha-<short>`.
 
-1. If the GHCR packages are private, log the host in once: `echo $GITHUB_TOKEN | docker login ghcr.io -u <user> --password-stdin`
+1. The GHCR packages are private (default for a personal repo): log the host in once with a token that has : `echo $GITHUB_TOKEN | docker login ghcr.io -u <user> --password-stdin`
    (Portainer: Registries → add `ghcr.io` with the same credentials).
 2. Portainer → Stacks → Add stack → name `georeminder` → paste `docker-compose.yml` (or use the Git
    repository option pointing at this repo, compose path `docker-compose.yml`).
