@@ -21,20 +21,20 @@ Full description, HA automations, Notion setup and troubleshooting: `README.md`.
 
 ## Architecture (as built)
 
-| Concern | Choice |
-|---|---|
-| Layout | pnpm monorepo: `apps/api` (Fastify 5 + Drizzle), `apps/admin` (React 19 + Vite 7 + MapLibre), `packages/shared` (zod 4 schemas/types, built to `dist`) |
-| Database | PostgreSQL 16 + PostGIS 3.4; `geography(Point,4326)` + GiST; migrations in `apps/api/drizzle/` run at API start (`RUN_MIGRATIONS`) |
-| Tables | `places`, `place_groups`, `place_group_members`, `rules`, `rule_recipients`, `recipients`, `channels`, `notion_config`, `notion_items`, `person_locations`, `place_states`, `rule_events` |
-| Evaluation | `services/evaluation.ts`: plausibility → current position → `ST_DWithin` candidates → `domain/geofence.ts` state machine (approach/enter/exit/dwell, hysteresis ×1.25, accuracy gating) → rules (recipient person, window, cooldown, daily cap, Notion items) → channel → `rule_events` |
-| Notion | `@notionhq/client` v5, API 2025-09-03 (data sources). In-process timer sync (`services/notion-sync.ts`), no queue/Redis |
-| Home Assistant | REST for `notify.*` and `/api/services`; **WebSocket** for zones (`zone/list|create|update|delete`). Active places ↔ `zone.gr_<place>` |
-| Auth | `x-api-key` (machine clients, full access) or admin session JWT cookie (`POST /v1/auth/login`, env credentials) |
-| Secrets at rest | AES-256-GCM (`crypto.ts`, key `ENCRYPTION_KEY`) for Notion/HA tokens; never returned by the API |
-| Admin | nginx (unprivileged, :8080) serves the static build and proxies `/api/` → `api:3000`; OSM raster tiles; Nominatim proxied by the API (UA + 1 req/s + cache) |
-| Docker | multi-stage `node:22-alpine`, non-root, **multi-arch (amd64 + arm64)**; images `ghcr.io/bacchusor/georeminder-{api,admin}` tagged `pre` (main), `<branch>`, `sha-<short>` by `.github/workflows/ci.yml` |
-| Pre-production | Raspberry Pi 4 `portainer-local` (192.168.1.111, arm64, Docker 20.10, Portainer). Home Assistant is a separate VM (192.168.1.119) → API published on host port 3000, admin on 3080 |
-| Timezone | `TZ` (default `Europe/Bucharest`) on every container; time windows and daily caps use it |
+| Concern         | Choice                                                                                                                                                                                                                                                                                  |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Layout          | pnpm monorepo: `apps/api` (Fastify 5 + Drizzle), `apps/admin` (React 19 + Vite 7 + MapLibre), `packages/shared` (zod 4 schemas/types, built to `dist`)                                                                                                                                  |
+| Database        | PostgreSQL 16 + PostGIS 3.4; `geography(Point,4326)` + GiST; migrations in `apps/api/drizzle/` run at API start (`RUN_MIGRATIONS`)                                                                                                                                                      |
+| Tables          | `places`, `place_groups`, `place_group_members`, `rules`, `rule_recipients`, `recipients`, `channels`, `notion_config`, `notion_items`, `person_locations`, `place_states`, `rule_events`                                                                                               |
+| Evaluation      | `services/evaluation.ts`: plausibility → current position → `ST_DWithin` candidates → `domain/geofence.ts` state machine (approach/enter/exit/dwell, hysteresis ×1.25, accuracy gating) → rules (recipient person, window, cooldown, daily cap, Notion items) → channel → `rule_events` |
+| Notion          | `@notionhq/client` v5, API 2025-09-03 (data sources). In-process timer sync (`services/notion-sync.ts`), no queue/Redis                                                                                                                                                                 |
+| Home Assistant  | REST for `notify.*` and `/api/services`; **WebSocket** for zones (`zone/list                                                                                                                                                                                                            | create | update | delete`). Active places ↔ `zone.gr_<place>` |
+| Auth            | `x-api-key` (machine clients, full access) or admin session JWT cookie (`POST /v1/auth/login`, env credentials)                                                                                                                                                                         |
+| Secrets at rest | AES-256-GCM (`crypto.ts`, key `ENCRYPTION_KEY`) for Notion/HA tokens; never returned by the API                                                                                                                                                                                         |
+| Admin           | nginx (unprivileged, :8080) serves the static build and proxies `/api/` → `api:3000`; OSM raster tiles; Nominatim proxied by the API (UA + 1 req/s + cache)                                                                                                                             |
+| Docker          | multi-stage `node:22-alpine`, non-root, **multi-arch (amd64 + arm64)**; images `ghcr.io/bacchusor/georeminder-{api,admin}` tagged `pre` (main), `<branch>`, `sha-<short>` by `.github/workflows/ci.yml`                                                                                 |
+| Pre-production  | Raspberry Pi 4 `portainer-local` (192.168.1.111, arm64, Docker 20.10, Portainer). Home Assistant is a separate VM (192.168.1.119) → API published on host port 3000, admin on 3080                                                                                                      |
+| Timezone        | `TZ` (default `Europe/Bucharest`) on every container; time windows and daily caps use it                                                                                                                                                                                                |
 
 ## API surface (`/docs` for OpenAPI)
 

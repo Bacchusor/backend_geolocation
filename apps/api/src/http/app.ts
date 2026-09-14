@@ -144,12 +144,10 @@ export async function buildApp(deps: AppDeps): Promise<App> {
     }
     const status = (err as { statusCode?: number }).statusCode;
     if (status && status < 500) {
-      return reply
-        .code(status)
-        .send({
-          error: (err as { code?: string }).code ?? 'error',
-          message: err instanceof Error ? err.message : String(err),
-        });
+      return reply.code(status).send({
+        error: (err as { code?: string }).code ?? 'error',
+        message: err instanceof Error ? err.message : String(err),
+      });
     }
     request.log.error({ err }, 'unhandled error');
     return reply.code(500).send({ error: 'internal', message: 'internal server error' });
