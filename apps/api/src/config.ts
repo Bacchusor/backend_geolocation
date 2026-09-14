@@ -52,7 +52,7 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => v === undefined || v === '1' || v === 'true'),
-  HA_ZONE_PREFIX: z.string().default('GR '),
+  HA_ZONE_PREFIX: z.string().default('GR'),
   HA_ZONE_WARN_LIMIT: z.coerce.number().int().min(1).default(20),
 
   NOMINATIM_URL: z.string().default('https://nominatim.openstreetmap.org'),

@@ -47,7 +47,7 @@ services:
       HA_URL: ${HA_URL:-}
       HA_TOKEN: ${HA_TOKEN:-}
       HA_ZONE_SYNC: ${HA_ZONE_SYNC:-true}
-      HA_ZONE_PREFIX: ${HA_ZONE_PREFIX:-GR }
+      HA_ZONE_PREFIX: ${HA_ZONE_PREFIX:-GR}
       NOMINATIM_URL: ${NOMINATIM_URL:-https://nominatim.openstreetmap.org}
       NOMINATIM_USER_AGENT: ${NOMINATIM_USER_AGENT:-GeoReminder/0.1 (self-hosted)}
       LOCATION_MIN_INTERVAL_SECONDS: ${LOCATION_MIN_INTERVAL_SECONDS:-5}

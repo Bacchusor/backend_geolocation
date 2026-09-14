@@ -42,7 +42,8 @@ export class ZoneSync {
   }
 
   zoneName(place: Place): string {
-    return `${this.config.HA_ZONE_PREFIX}${place.name}`.trim();
+    const prefix = this.config.HA_ZONE_PREFIX.trim();
+    return prefix ? `${prefix} ${place.name}` : place.name;
   }
 
   entityId(place: Place): string {
