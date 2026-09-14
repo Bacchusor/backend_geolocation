@@ -6,6 +6,7 @@ ARG PNPM_VERSION=10.17.1
 # ---------- build ----------
 FROM ${NODE_IMAGE} AS build
 ARG PNPM_VERSION
+ENV CI=true
 RUN npm install -g pnpm@${PNPM_VERSION}
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
