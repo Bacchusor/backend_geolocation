@@ -1,5 +1,0 @@
-[
-  { "name": "Notre-Dame de Paris", "lat": 48.8530, "lng": 2.3499, "metadata": { "kind": "landmark" } },
-  { "name": "Musée du Louvre", "lat": 48.8606, "lng": 2.3376, "metadata": { "kind": "museum" } },
-  { "name": "Tour Eiffel", "lat": 48.8584, "lng": 2.2945, "metadata": { "kind": "landmark" } }
-]

@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/.vite
+.git
+.github
+docs
+*.md
+.env
+.env.*
+.secrets.env
+.secrets.env.*
+**/*.test.ts
+**/coverage

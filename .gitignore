@@ -1,4 +1,18 @@
 node_modules/
 dist/
-.env
+build/
+coverage/
 *.log
+.env
+.env.*
+!.env.example
+.secrets.env
+.secrets.env.*
+!.secrets.env.example
+.DS_Store
+Thumbs.db
+.vite/
+*.tsbuildinfo
+# Homelab docs copied from the homelab-monitoring repo for context; they belong there.
+docs/0[0-9]-*.md
+docs/inventory-*.txt

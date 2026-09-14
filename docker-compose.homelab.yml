@@ -1,0 +1,14 @@
+# Overlay: attach api + admin to an existing external Docker network (e.g. one shared with a
+# containerised Home Assistant) so HA can reach http://georeminder-api:3000 by container name.
+#   docker network create homelab   # once
+#   docker compose -f docker-compose.yml -f docker-compose.homelab.yml up -d
+# Not needed in the current homelab: Home Assistant runs on its own VM and reaches the API through the published port.
+services:
+  api:
+    networks: [default, homelab]
+  admin:
+    networks: [default, homelab]
+networks:
+  homelab:
+    external: true
+    name: ${EXTERNAL_NETWORK:-homelab}

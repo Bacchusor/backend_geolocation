@@ -1,21 +1,90 @@
-# Local development database. Production should use managed Postgres with PostGIS
-# (Supabase, Neon, RDS) — see docs/geolocation-service.md.
+# GeoReminder — pre-production stack (Portainer-friendly: images are pulled from GHCR, no build step).
+# Configure through a `.env` next to this file (Portainer: the stack's environment variables). See .env.example.
 services:
-  db:
+  postgis:
     image: postgis/postgis:16-3.4
+    container_name: georeminder-postgis
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: geo
-      POSTGRES_PASSWORD: geo
-      POSTGRES_DB: geo
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-georeminder}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-georeminder}
+      TZ: ${TZ:-Europe/Bucharest}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - georeminder-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U geo -d geo"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-georeminder} -d ${POSTGRES_DB:-georeminder}']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  api:
+    image: ${IMAGE_REGISTRY:-ghcr.io/bacchusor}/georeminder-api:${IMAGE_TAG:-pre}
+    container_name: georeminder-api
+    restart: unless-stopped
+    depends_on:
+      postgis:
+        condition: service_healthy
+    ports:
+      - '${API_PORT:-3000}:3000'
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      TZ: ${TZ:-Europe/Bucharest}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: postgres://${POSTGRES_USER:-georeminder}:${POSTGRES_PASSWORD}@postgis:5432/${POSTGRES_DB:-georeminder}
+      RUN_MIGRATIONS: 'true'
+      API_KEY: ${API_KEY:?set API_KEY}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      PUBLIC_API_URL: ${PUBLIC_API_URL:-http://localhost:3000}
+      HA_URL: ${HA_URL:-}
+      HA_TOKEN: ${HA_TOKEN:-}
+      HA_ZONE_SYNC: ${HA_ZONE_SYNC:-true}
+      HA_ZONE_PREFIX: ${HA_ZONE_PREFIX:-GR }
+      NOMINATIM_URL: ${NOMINATIM_URL:-https://nominatim.openstreetmap.org}
+      NOMINATIM_USER_AGENT: ${NOMINATIM_USER_AGENT:-GeoReminder/0.1 (self-hosted)}
+      LOCATION_MIN_INTERVAL_SECONDS: ${LOCATION_MIN_INTERVAL_SECONDS:-5}
+      MAX_SPEED_MPS: ${MAX_SPEED_MPS:-100}
+      MAX_FIX_AGE_HOURS: ${MAX_FIX_AGE_HOURS:-24}
+      EXIT_HYSTERESIS_FACTOR: ${EXIT_HYSTERESIS_FACTOR:-1.25}
+      EVENT_RETENTION_DAYS: ${EVENT_RETENTION_DAYS:-30}
+      NOTION_SYNC_ENABLED: ${NOTION_SYNC_ENABLED:-true}
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/v1/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  admin:
+    image: ${IMAGE_REGISTRY:-ghcr.io/bacchusor}/georeminder-admin:${IMAGE_TAG:-pre}
+    container_name: georeminder-admin
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '${ADMIN_PORT:-3080}:8080'
+    environment:
+      TZ: ${TZ:-Europe/Bucharest}
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8080/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
-  pgdata:
+  georeminder-pgdata:

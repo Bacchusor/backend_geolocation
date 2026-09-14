@@ -1,0 +1,13 @@
+# Local development / verification: build the images from source instead of pulling from GHCR.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: georeminder-api:local
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    image: georeminder-admin:local
