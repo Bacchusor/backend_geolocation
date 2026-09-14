@@ -14,7 +14,11 @@ services:
       - georeminder-pgdata:/var/lib/postgresql/data
     healthcheck:
       test:
-        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-georeminder} -d ${POSTGRES_DB:-georeminder}']
+        # -h 127.0.0.1: the init-time temporary server only listens on the unix socket and must not count as healthy
+        [
+          'CMD-SHELL',
+          'pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-georeminder} -d ${POSTGRES_DB:-georeminder}',
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
