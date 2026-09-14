@@ -21,7 +21,7 @@ flowchart LR
   subgraph "GeoReminder stack (Portainer, .111)"
     ADMIN[admin<br/>nginx + React/MapLibre<br/>:3080]
     API[api<br/>Fastify + Drizzle<br/>:3000]
-    DB[(postgis<br/>PostgreSQL 16 + PostGIS 3.4)]
+    DB[(postgis<br/>PostgreSQL 16 + PostGIS 3.5)]
   end
   N[(Notion database<br/>Name / Needed / Shop / Category)]
   OSM[Nominatim / OSM tiles]
@@ -88,7 +88,7 @@ pnpm --filter @georeminder/shared build
 pnpm dev:api                                       # http://localhost:3000/docs
 pnpm dev:admin                                     # http://localhost:5173 (proxies /api to :3000)
 pnpm lint && pnpm typecheck && pnpm test:unit
-pnpm test:integration                              # needs Docker (testcontainers pulls postgis/postgis:16-3.4)
+pnpm test:integration                              # needs Docker (testcontainers pulls imresamu/postgis:16-3.5)
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build   # full stack from source
 ```
 

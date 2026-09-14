@@ -92,7 +92,7 @@ const tick = (seconds: number) => {
 };
 
 beforeAll(async () => {
-  container = await new PostgreSqlContainer('postgis/postgis:16-3.4')
+  container = await new PostgreSqlContainer(process.env.POSTGIS_IMAGE ?? 'imresamu/postgis:16-3.5')
     .withDatabase('georeminder')
     .start();
   ENV.DATABASE_URL = container.getConnectionUri();

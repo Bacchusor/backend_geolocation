@@ -24,7 +24,7 @@ Full description, HA automations, Notion setup and troubleshooting: `README.md`.
 | Concern         | Choice                                                                                                                                                                                                                                                                                  |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Layout          | pnpm monorepo: `apps/api` (Fastify 5 + Drizzle), `apps/admin` (React 19 + Vite 7 + MapLibre), `packages/shared` (zod 4 schemas/types, built to `dist`)                                                                                                                                  |
-| Database        | PostgreSQL 16 + PostGIS 3.4; `geography(Point,4326)` + GiST; migrations in `apps/api/drizzle/` run at API start (`RUN_MIGRATIONS`)                                                                                                                                                      |
+| Database        | PostgreSQL 16 + PostGIS 3.5; `geography(Point,4326)` + GiST; migrations in `apps/api/drizzle/` run at API start (`RUN_MIGRATIONS`)                                                                                                                                                      |
 | Tables          | `places`, `place_groups`, `place_group_members`, `rules`, `rule_recipients`, `recipients`, `channels`, `notion_config`, `notion_items`, `person_locations`, `place_states`, `rule_events`                                                                                               |
 | Evaluation      | `services/evaluation.ts`: plausibility → current position → `ST_DWithin` candidates → `domain/geofence.ts` state machine (approach/enter/exit/dwell, hysteresis ×1.25, accuracy gating) → rules (recipient person, window, cooldown, daily cap, Notion items) → channel → `rule_events` |
 | Notion          | `@notionhq/client` v5, API 2025-09-03 (data sources). In-process timer sync (`services/notion-sync.ts`), no queue/Redis                                                                                                                                                                 |
@@ -50,7 +50,7 @@ CRUD `/v1/places|place-groups|rules|recipients|channels` · `GET /v1/places/{id}
 - Spatial queries: `ST_DWithin` in `WHERE`, `ST_Distance` only for ordering, longitude before latitude in `ST_MakePoint`. Every new spatial query gets an `EXPLAIN` once (see the integration test).
 - Input validation: lat ∈ [-90, 90], lng ∈ [-180, 180], accuracy ≥ 0, radius > 0 and ≤ 50 km, approach radius ≥ enter radius.
 - Logs are pino JSON; coordinates only at `debug` and rounded to 3 decimals (`roundCoord`). Never log tokens.
-- Tests: `vitest`. Unit tests for domain logic (`src/domain/*.test.ts`, `packages/shared`). Integration tests (`*.int.test.ts`) run against `postgis/postgis:16-3.4` via testcontainers — never mock spatial queries.
+- Tests: `vitest`. Unit tests for domain logic (`src/domain/*.test.ts`, `packages/shared`). Integration tests (`*.int.test.ts`) run against `imresamu/postgis:16-3.5` via testcontainers — never mock spatial queries.
 - Migrations: change `src/db/schema.ts` → `pnpm --filter @georeminder/api db:generate` → review SQL (keep `CREATE EXTENSION IF NOT EXISTS postgis` first) → add a manual down script under `drizzle/down/`.
 - Commands: `pnpm lint`, `pnpm typecheck`, `pnpm test:unit`, `pnpm test:integration`, `pnpm build`, `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`.
 
@@ -75,7 +75,7 @@ CRUD `/v1/places|place-groups|rules|recipients|channels` · `GET /v1/places/{id}
 ## Open decisions
 
 - [x] Backend language/framework — TypeScript + Fastify 5 + Drizzle (2026-09-15)
-- [x] Managed Postgres — self-hosted `postgis/postgis:16-3.4` container in the stack (home server; `pg_dump` backups)
+- [x] Managed Postgres — self-hosted `imresamu/postgis:16-3.5` container in the stack (home server; `pg_dump` backups)
 - [x] Geocoding provider — Nominatim (admin address search only; no Google/Mapbox dependency)
 - [x] Live tracking — out of scope; current position only
 - [x] History retention — 30 days of `rule_events`, `EVENT_RETENTION_DAYS`

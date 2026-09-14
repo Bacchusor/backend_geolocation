@@ -2,7 +2,7 @@
 # Configure through a `.env` next to this file (Portainer: the stack's environment variables). See .env.example.
 services:
   postgis:
-    image: postgis/postgis:16-3.4
+    image: ${POSTGIS_IMAGE:-imresamu/postgis:16-3.5}
     container_name: georeminder-postgis
     restart: unless-stopped
     environment:
