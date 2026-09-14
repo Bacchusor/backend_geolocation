@@ -56,7 +56,7 @@ CRUD `/v1/places|place-groups|rules|recipients|channels` · `GET /v1/places/{id}
 
 ## Security & privacy rules (non-negotiable)
 
-- Every endpoint except `/v1/health`, `/v1/ready`, `/v1/auth/login|logout` requires the API key or an admin session.
+- Every endpoint except `/v1/health`, `/v1/ready`, `/v1/auth/login|logout` and `/docs` requires the API key or an admin session.
 - Client location is only used for reminders. Server-side plausibility: future/stale/out-of-order fixes and jumps > `MAX_SPEED_MPS` are ignored and logged.
 - Store the minimum: one current position per person, no track history; `rule_events` keep distances, not coordinates, and are purged after `EVENT_RETENTION_DAYS` (30). `GET /v1/persons` rounds to 3 decimals.
 - `DELETE /v1/location?person=` erases position, geofence state and events (GDPR-style).
