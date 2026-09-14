@@ -202,7 +202,7 @@ export class Evaluator {
       .from(places)
       .where(
         sql`${places.active} = true AND (
-          ST_DWithin(${places.position}, ${pt}, ${places.approach_radius_m} * ${h})
+          ST_DWithin(${places.position}, ${pt}, ${places.approach_radius_m} * ${h}::float8)
           OR ${places.id} IN (SELECT ${placeStates.place_id} FROM ${placeStates}
                               WHERE ${placeStates.person} = ${person} AND (${placeStates.in_approach} OR ${placeStates.in_enter}))
         )`,

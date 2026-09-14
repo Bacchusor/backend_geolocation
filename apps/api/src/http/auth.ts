@@ -66,6 +66,7 @@ export function registerAuth(
 ): void {
   app.decorateRequest('auth', null);
   app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (request.url.startsWith('/docs')) return; // OpenAPI document and Swagger UI are public (no secrets inside)
     const mode: AuthMode = request.routeOptions.config.auth ?? 'any';
     request.auth = await resolveAuth(request, config.API_KEY, sessions);
     if (mode === 'public') return;
