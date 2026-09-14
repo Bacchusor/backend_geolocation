@@ -195,7 +195,7 @@ describe('rule evaluation (PostGIS)', () => {
     tick(60);
     r = await evaluator.processFix(fix(east(400)));
     expect(r.notifications).toBe(1);
-    expect(channels.sent[0]?.msg.message).toBe('2 items for Lidl: Milk, Soap');
+    expect(channels.sent[0]?.msg.message).toBe('2 items for Lidl: Soap, Milk'); // sorted by category, then name
     expect(channels.sent[0]?.msg.url).toBe('https://notion.so/x');
 
     // 550 m is outside the approach radius but inside the 625 m hysteresis band: still "in approach"
