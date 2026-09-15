@@ -1,4 +1,4 @@
-import { and, asc, eq, notInArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import {
   DEFAULT_NOTION_MAPPING,
   notionPropertyMappingSchema,
@@ -196,7 +196,7 @@ export class NotionService {
     if (place.notion_categories.length) {
       const wanted = place.notion_categories.map((c) => c.toLowerCase());
       conds.push(
-        sql`EXISTS (SELECT 1 FROM unnest(${notionItems.categories}) c WHERE lower(c) = ANY(${wanted}))`,
+        sql`EXISTS (SELECT 1 FROM unnest(${notionItems.categories}) c WHERE ${inArray(sql`lower(c)`, wanted)})`,
       );
     }
     const rows = await this.db
