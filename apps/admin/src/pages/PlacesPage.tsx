@@ -21,7 +21,7 @@ const DEFAULTS: PlaceInput = {
   notion_shop: null,
   notion_categories: [],
   notion_min_items: 1,
-  message_template: '{count} items for {shop}: {items}',
+  message_template: '{count} items to buy',
   group_by_category: false,
   notion_url: null,
 };

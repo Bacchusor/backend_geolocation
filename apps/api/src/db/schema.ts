@@ -39,9 +39,7 @@ export const places = pgTable(
       .notNull()
       .default(sql`'{}'::text[]`),
     notion_min_items: integer('notion_min_items').notNull().default(1),
-    message_template: text('message_template')
-      .notNull()
-      .default('{count} items for {shop}: {items}'),
+    message_template: text('message_template').notNull().default('{count} items to buy'),
     group_by_category: boolean('group_by_category').notNull().default(false),
     notion_url: text('notion_url'),
     ha_zone_id: text('ha_zone_id'),

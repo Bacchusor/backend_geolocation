@@ -8,10 +8,12 @@ import { RulesPage } from './pages/RulesPage';
 import { RecipientsPage } from './pages/RecipientsPage';
 import { NotionPage } from './pages/NotionPage';
 import { EventsPage } from './pages/EventsPage';
+import { ThemeToggle, useTheme } from './components/theme';
 
 export function App() {
   const qc = useQueryClient();
   const [loggedOut, setLoggedOut] = useState(false);
+  const [theme, toggleTheme] = useTheme();
   const me = useQuery({ queryKey: ['me'], queryFn: api.auth.me, retry: false });
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export function App() {
         <a className="muted" href="/api/docs" target="_blank" rel="noreferrer">
           API docs
         </a>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         <button className="btn ghost" onClick={() => void logout()}>
           Log out
         </button>

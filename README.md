@@ -41,7 +41,9 @@ Evaluation on every fix: plausibility check → upsert current position → Post
 person × place (approach / enter / exit / dwell with 25 % exit hysteresis, accuracy gating) → for each
 transition, the enabled rules of that place (or its groups): recipient for this person → time window and
 days → cooldown → daily cap → cached Notion items (min count, categories) → render template → send through
-the recipient's channel → write `rule_events` with the reason.
+the recipient's channel → write `rule_events` with the reason. The push shows the **shop name** as title and
+**how many items** need to be bought as the message (template `{count} items to buy`, editable per place;
+`{items}`, `{categories}`, `{place}`, `{person}` are available too).
 
 ## Repository layout
 

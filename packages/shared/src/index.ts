@@ -43,7 +43,7 @@ export const placeInputSchema = z
     notion_shop: z.string().trim().max(120).nullable().default(null),
     notion_categories: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
     notion_min_items: z.number().int().min(1).max(1000).default(1),
-    message_template: z.string().max(500).default('{count} items for {shop}: {items}'),
+    message_template: z.string().max(500).default('{count} items to buy'),
     group_by_category: z.boolean().default(false),
     notion_url: z.url().max(2000).nullable().default(null),
   })

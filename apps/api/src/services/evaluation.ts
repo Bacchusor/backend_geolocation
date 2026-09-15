@@ -372,7 +372,7 @@ export class Evaluator {
       const channel = channels.build(t.channel);
       deliveries.push(
         await channel.send(t.target, {
-          title: place.name,
+          title: place.notion_shop ?? place.name,
           message,
           url: place.notion_url,
           tag: `georeminder-${place.id}`,
