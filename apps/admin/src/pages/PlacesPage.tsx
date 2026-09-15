@@ -204,6 +204,12 @@ export function PlacesPage({ readOnly = false }: { readOnly?: boolean }) {
         )}
       </div>
       {message && <Alert kind={message.kind}>{message.text}</Alert>}
+      {consistency.data?.error && (
+        <Alert kind="err">
+          Notion: {consistency.data.error} Fix it under <a href="/notion">Notion</a> (usually: share
+          the database with the integration again, then Test connection and Sync now).
+        </Alert>
+      )}
       {consistency.data &&
         (consistency.data.shops_without_place.length > 0 ||
           consistency.data.places_with_missing_shop.length > 0) && (
@@ -221,7 +227,6 @@ export function PlacesPage({ readOnly = false }: { readOnly?: boolean }) {
                   .join(', ')}
               </div>
             )}
-            {consistency.data.error && <div className="small">{consistency.data.error}</div>}
           </Alert>
         )}
       <div className="split">

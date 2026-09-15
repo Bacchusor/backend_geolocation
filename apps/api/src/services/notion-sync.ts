@@ -237,14 +237,13 @@ export class NotionService {
       const bound = new Set(
         placeRows.map((p) => p.shop?.toLowerCase()).filter((s): s is string => !!s),
       );
-      const known = new Set(shops.map((s) => s.toLowerCase()));
+      // The cache only knows the shops of *needed* items, not the option list, so "missing option"
+      // cannot be judged here; only report cached shops that have no place yet.
       return {
         shops_without_place: shops.filter((s) => !bound.has(s.toLowerCase())),
-        places_with_missing_shop: placeRows
-          .filter((p) => p.shop && known.size > 0 && !known.has(p.shop.toLowerCase()))
-          .map((p) => ({ place_id: p.id, name: p.name, shop: p.shop! })),
+        places_with_missing_shop: [],
         checked_at,
-        error: `Notion unreachable, compared against cached items: ${err instanceof Error ? err.message : String(err)}`,
+        error: `Notion unreachable (${err instanceof Error ? err.message : String(err)}). Rules keep using the cached items.`,
       };
     }
   }

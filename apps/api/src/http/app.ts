@@ -31,6 +31,7 @@ import type { NominatimClient } from '../integrations/nominatim.js';
 import { ConflictError, NotFoundError } from '../services/repos.js';
 import { HaError } from '../integrations/home-assistant.js';
 import { NotionError } from '../integrations/notion.js';
+import { isNotionClientError } from '@notionhq/client';
 import { registerAuth, SessionService } from './auth.js';
 import { authRoutes } from './routes/auth.js';
 import { healthRoutes } from './routes/health.js';
@@ -143,8 +144,8 @@ export async function buildApp(deps: AppDeps): Promise<App> {
       return reply.code(409).send({ error: 'conflict', message: err.message });
     if (err instanceof ForbiddenError)
       return reply.code(403).send({ error: 'forbidden', message: err.message });
-    if (err instanceof HaError || err instanceof NotionError) {
-      return reply.code(502).send({ error: 'upstream', message: err.message });
+    if (err instanceof HaError || err instanceof NotionError || isNotionClientError(err)) {
+      return reply.code(502).send({ error: 'upstream', message: (err as Error).message });
     }
     const status = (err as { statusCode?: number }).statusCode;
     if (status && status < 500) {
