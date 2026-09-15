@@ -25,11 +25,11 @@ Full description, HA automations, Notion setup and troubleshooting: `README.md`.
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Layout          | pnpm monorepo: `apps/api` (Fastify 5 + Drizzle), `apps/admin` (React 19 + Vite 7 + MapLibre), `packages/shared` (zod 4 schemas/types, built to `dist`)                                                                                                                                  |
 | Database        | PostgreSQL 16 + PostGIS 3.5; `geography(Point,4326)` + GiST; migrations in `apps/api/drizzle/` run at API start (`RUN_MIGRATIONS`)                                                                                                                                                      |
-| Tables          | `places`, `place_groups`, `place_group_members`, `rules`, `rule_recipients`, `recipients`, `channels`, `notion_config`, `notion_items`, `person_locations`, `place_states`, `rule_events`                                                                                               |
+| Tables          | `places`, `place_groups`, `place_group_members`, `rules`, `rule_recipients`, `recipients`, `channels`, `notion_config`, `notion_items`, `person_locations`, `place_states`, `rule_events`, `users`                                                                                      |
 | Evaluation      | `services/evaluation.ts`: plausibility → current position → `ST_DWithin` candidates → `domain/geofence.ts` state machine (approach/enter/exit/dwell, hysteresis ×1.25, accuracy gating) → rules (recipient person, window, cooldown, daily cap, Notion items) → channel → `rule_events` |
 | Notion          | `@notionhq/client` v5, API 2025-09-03 (data sources). In-process timer sync (`services/notion-sync.ts`), no queue/Redis                                                                                                                                                                 |
 | Home Assistant  | REST for `notify.*` and `/api/services`; **WebSocket** for zones (`zone/list`, `zone/create`, `zone/update`, `zone/delete`). Active places ↔ `zone.gr_<place>`                                                                                                                          |
-| Auth            | `x-api-key` (machine clients, full access) or admin session JWT cookie (`POST /v1/auth/login`, env credentials)                                                                                                                                                                         |
+| Auth            | `x-api-key` (machine clients, admin-equivalent) or a session cookie backed by the `users` table (roles `admin` / `member`, scrypt passwords, first admin bootstrapped from `ADMIN_USERNAME`/`ADMIN_PASSWORD`). Members are read-only except `/v1/me`.                                   |
 | Secrets at rest | AES-256-GCM (`crypto.ts`, key `ENCRYPTION_KEY`) for Notion/HA tokens; never returned by the API                                                                                                                                                                                         |
 | Admin           | nginx (unprivileged, :8080) serves the static build and proxies `/api/` → `api:3000`; OSM raster tiles; Nominatim proxied by the API (UA + 1 req/s + cache)                                                                                                                             |
 | Docker          | multi-stage `node:22-alpine`, non-root, **multi-arch (amd64 + arm64)**; images `ghcr.io/bacchusor/georeminder-{api,admin}` tagged `pre` (main), `<branch>`, `sha-<short>` by `.github/workflows/ci.yml`                                                                                 |
@@ -41,7 +41,7 @@ Full description, HA automations, Notion setup and troubleshooting: `README.md`.
 `POST /v1/location` (single or batch) · `POST /v1/geofence/events` (`zone` or `place_id`) · `GET /v1/nearby` ·
 CRUD `/v1/places|place-groups|rules|recipients|channels` · `GET /v1/places/{id}/items` · `POST /v1/places/{id}/zone-sync` ·
 `/v1/channels/{id}/test|targets|send-test` · `/v1/notion/config|test|schema|sync|items|consistency` ·
-`GET /v1/events` · `GET /v1/persons` · `DELETE /v1/location?person=` · `POST /v1/ha/zones/sync` · `/v1/health` · `/v1/ready` · `/v1/geocode/search`.
+`/v1/users` (admin CRUD) · `/v1/me`, `/v1/me/password` (self-service) · `GET /v1/events` · `GET /v1/persons` · `DELETE /v1/location?person=` · `POST /v1/ha/zones/sync` · `/v1/health` · `/v1/ready` · `/v1/geocode/search`.
 
 ## Conventions
 
@@ -56,7 +56,7 @@ CRUD `/v1/places|place-groups|rules|recipients|channels` · `GET /v1/places/{id}
 
 ## Security & privacy rules (non-negotiable)
 
-- Every endpoint except `/v1/health`, `/v1/ready`, `/v1/auth/login|logout` and `/docs` requires the API key or an admin session.
+- Every endpoint except `/v1/health`, `/v1/ready`, `/v1/auth/login|logout` and `/docs` requires the API key or a session. Write methods need the admin role (or the API key) unless the route sets `allowMember`; a user's `preferences.notifications_enabled=false` silences reminders for their linked `person`.
 - Client location is only used for reminders. Server-side plausibility: future/stale/out-of-order fixes and jumps > `MAX_SPEED_MPS` are ignored and logged.
 - Store the minimum: one current position per person, no track history; `rule_events` keep distances, not coordinates, and are purged after `EVENT_RETENTION_DAYS` (30). `GET /v1/persons` rounds to 3 decimals.
 - `DELETE /v1/location?person=` erases position, geofence state and events (GDPR-style).

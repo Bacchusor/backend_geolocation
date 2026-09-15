@@ -380,3 +380,71 @@ export const roundCoord = (v: number, decimals = 3): number => {
   const f = 10 ** decimals;
   return Math.round(v * f) / f;
 };
+
+// ---------- Users / profiles ----------
+export const ROLES = ['admin', 'member'] as const;
+export const roleSchema = z.enum(ROLES);
+export type Role = z.infer<typeof roleSchema>;
+
+export const usernameSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(64)
+  .regex(/^[a-z0-9_.-]+$/i, 'username must be letters, digits, _ . -');
+export const passwordSchema = z.string().min(8).max(200);
+
+export const userPreferencesSchema = z.object({
+  /** UI theme applied at login ('system' keeps the OS/browser choice). */
+  theme: z.enum(['system', 'light', 'dark']).default('system'),
+  language: z.enum(['en', 'fr', 'ro']).default('en'),
+  /** Master switch: when false no rule notifies this user's person. */
+  notifications_enabled: z.boolean().default(true),
+  /** Free-form per-app settings (the calendar app can keep its own keys here). */
+  apps: z.record(z.string(), z.record(z.string(), z.unknown())).default({}),
+});
+export type UserPreferences = z.infer<typeof userPreferencesSchema>;
+export const DEFAULT_USER_PREFERENCES: UserPreferences = {
+  theme: 'system',
+  language: 'en',
+  notifications_enabled: true,
+  apps: {},
+};
+
+export const userSchema = z.object({
+  id: idSchema,
+  username: z.string(),
+  display_name: z.string(),
+  role: roleSchema,
+  person: z.string().nullable(),
+  preferences: userPreferencesSchema,
+  active: z.boolean(),
+  last_login_at: isoDate.nullable(),
+  created_at: isoDate,
+  updated_at: isoDate,
+});
+export type User = z.infer<typeof userSchema>;
+
+/** Admin: create a user (password required) or update one (password optional = keep). */
+export const userInputSchema = z.object({
+  username: usernameSchema,
+  display_name: z.string().trim().min(1).max(120),
+  role: roleSchema.default('member'),
+  person: personSchema.nullable().default(null),
+  preferences: userPreferencesSchema.default(DEFAULT_USER_PREFERENCES),
+  active: z.boolean().default(true),
+  password: passwordSchema.optional(),
+});
+export type UserInput = z.infer<typeof userInputSchema>;
+
+/** Self-service: what a user may change on their own profile. */
+export const profileUpdateSchema = z.object({
+  display_name: z.string().trim().min(1).max(120),
+  preferences: userPreferencesSchema,
+});
+export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;
+
+export const passwordChangeSchema = z.object({
+  current_password: z.string().min(1).max(200),
+  new_password: passwordSchema,
+});

@@ -75,6 +75,7 @@ Machine clients send `x-api-key: <API_KEY>`; the admin UI uses a session cookie.
 | `GET/PUT` | `/v1/notion/config`, `POST /v1/notion/test`, `GET /v1/notion/schema`, `POST /v1/notion/sync`, `GET /v1/notion/items`, `GET /v1/notion/consistency` | Notion                                                                                      |
 | `GET`     | `/v1/events?person=&place=&rule=&outcome=&from=&to=&limit=&before_id=`                                                                             | event log                                                                                   |
 | `GET`     | `/v1/persons` · `DELETE /v1/location?person=`                                                                                                      | current positions (rounded) · erase a person                                                |
+| `CRUD`    | `/v1/users` (admin) · `GET/PUT /v1/me`, `PUT /v1/me/password`                                                                                      | profiles: admin management, self-service                                                    |
 | `GET`     | `/v1/health`, `/v1/ready`                                                                                                                          | liveness / readiness (DB + PostGIS)                                                         |
 | `GET`     | `/v1/geocode/search?q=`                                                                                                                            | Nominatim proxy for the admin map                                                           |
 
@@ -218,6 +219,16 @@ rest_command:
 The `device_tracker` state is the zone's friendly name (`GR Lidl`); the API resolves it to the place. Position
 updates arrive whenever the Companion app reports (every few minutes, or on significant movement); the zone
 events are the precise, battery-friendly enter/exit signal. Both feed the same evaluator.
+
+## Profiles (administrators and members)
+
+The first start creates an **administrator** from `ADMIN_USERNAME` / `ADMIN_PASSWORD` (only when the `users`
+table is empty; change the password afterwards under _My profile_). Administrators manage everything and the
+**Profiles** page: create members, set the role, link the profile to a `person` id (the id Home Assistant sends
+for that phone), deactivate or delete accounts. **Members** see the map, rules and event log read-only and edit
+their own display name, password and preferences (theme, language, _notifications enabled_). Switching
+notifications off silences every reminder for the linked person; the event log shows why. The `preferences.apps`
+object is free-form so the calendar app can keep its own settings per user. Machine clients keep using the API key.
 
 ## Notion setup
 

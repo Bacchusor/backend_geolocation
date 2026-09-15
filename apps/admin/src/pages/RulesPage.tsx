@@ -34,7 +34,7 @@ const TRIGGER_HELP: Record<string, string> = {
   dwell: 'fires after staying inside the enter radius for the place’s dwell seconds',
 };
 
-export function RulesPage() {
+export function RulesPage({ readOnly = false }: { readOnly?: boolean }) {
   const qc = useQueryClient();
   const rules = useQuery({ queryKey: ['rules'], queryFn: api.rules.list });
   const places = useQuery({ queryKey: ['places'], queryFn: api.places.list });
@@ -84,9 +84,11 @@ export function RulesPage() {
       <div className="row">
         <h2 className="page-title">Rules</h2>
         <div className="spacer" />
-        <button className="btn primary" onClick={() => open('new')}>
-          + New rule
-        </button>
+        {!readOnly && (
+          <button className="btn primary" onClick={() => open('new')}>
+            + New rule
+          </button>
+        )}
       </div>
       {message && <Alert kind={message.kind}>{message.text}</Alert>}
       <div className="split">
@@ -105,7 +107,7 @@ export function RulesPage() {
             </thead>
             <tbody>
               {rules.data?.items.map((r) => (
-                <tr key={r.id} className="clickable" onClick={() => open(r)}>
+                <tr key={r.id} className="clickable" onClick={() => !readOnly && open(r)}>
                   <td>
                     {r.name} {!r.enabled && <Badge>disabled</Badge>}
                   </td>
@@ -137,15 +139,17 @@ export function RulesPage() {
                     <div className="muted">max {r.max_per_day || '∞'}/day</div>
                   </td>
                   <td>
-                    <button
-                      className="btn sm danger"
-                      onClick={(e) => (
-                        e.stopPropagation(),
-                        confirm('Delete rule?') && remove.mutate(r.id)
-                      )}
-                    >
-                      Delete
-                    </button>
+                    {!readOnly && (
+                      <button
+                        className="btn sm danger"
+                        onClick={(e) => (
+                          e.stopPropagation(),
+                          confirm('Delete rule?') && remove.mutate(r.id)
+                        )}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -158,7 +162,7 @@ export function RulesPage() {
               )}
             </tbody>
           </table>
-          <GroupsEditor />
+          <GroupsEditor readOnly={readOnly} />
         </div>
         <div className="panel">
           {!editing && <p className="muted">Select a rule or create one.</p>}
@@ -311,7 +315,7 @@ export function RulesPage() {
   );
 }
 
-function GroupsEditor() {
+function GroupsEditor({ readOnly }: { readOnly: boolean }) {
   const qc = useQueryClient();
   const groups = useQuery({ queryKey: ['groups'], queryFn: api.groups.list });
   const places = useQuery({ queryKey: ['places'], queryFn: api.places.list });
@@ -333,12 +337,14 @@ function GroupsEditor() {
       <div className="row">
         <h3 style={{ margin: 0 }}>Place groups</h3>
         <div className="spacer" />
-        <button
-          className="btn sm"
-          onClick={() => setDraft({ id: null, input: { name: '', place_ids: [] } })}
-        >
-          + Group
-        </button>
+        {!readOnly && (
+          <button
+            className="btn sm"
+            onClick={() => setDraft({ id: null, input: { name: '', place_ids: [] } })}
+          >
+            + Group
+          </button>
+        )}
       </div>
       <table>
         <tbody>
@@ -351,20 +357,24 @@ function GroupsEditor() {
                   .join(', ') || 'empty'}
               </td>
               <td style={{ textAlign: 'right' }}>
-                <button
-                  className="btn sm"
-                  onClick={() =>
-                    setDraft({ id: g.id, input: { name: g.name, place_ids: g.place_ids } })
-                  }
-                >
-                  Edit
-                </button>{' '}
-                <button
-                  className="btn sm danger"
-                  onClick={() => confirm('Delete group and its rules?') && remove.mutate(g.id)}
-                >
-                  Delete
-                </button>
+                {!readOnly && (
+                  <>
+                    <button
+                      className="btn sm"
+                      onClick={() =>
+                        setDraft({ id: g.id, input: { name: g.name, place_ids: g.place_ids } })
+                      }
+                    >
+                      Edit
+                    </button>{' '}
+                    <button
+                      className="btn sm danger"
+                      onClick={() => confirm('Delete group and its rules?') && remove.mutate(g.id)}
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
               </td>
             </tr>
           ))}

@@ -11,6 +11,7 @@ import { NominatimClient } from './integrations/nominatim.js';
 import { purgeEvents } from './services/events.js';
 import { channels } from './db/schema.js';
 import { eq } from 'drizzle-orm';
+import { ensureBootstrapAdmin } from './services/users.js';
 
 async function main() {
   const config = loadConfig();
@@ -20,6 +21,8 @@ async function main() {
 
   await waitForDb(db, log);
   if (config.RUN_MIGRATIONS) await runMigrations(db, log);
+
+  await ensureBootstrapAdmin(db, config.ADMIN_USERNAME, config.ADMIN_PASSWORD, log);
 
   const secrets = new SecretBox(config.ENCRYPTION_KEY);
   const channelFactory = new ChannelFactory(secrets);

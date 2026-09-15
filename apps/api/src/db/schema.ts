@@ -10,6 +10,7 @@ import {
   real,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { geographyPoint } from './geo.js';
@@ -234,5 +235,31 @@ export const ruleEvents = pgTable(
     index('rule_events_created_idx').on(t.created_at),
     index('rule_events_person_created_idx').on(t.person, t.created_at),
     index('rule_events_rule_person_idx').on(t.rule_id, t.person, t.outcome, t.created_at),
+  ],
+);
+
+/** Admin/member accounts for the admin UI and the future apps. Passwords are scrypt hashes. */
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id')
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    username: text('username').notNull(),
+    display_name: text('display_name').notNull(),
+    role: text('role').notNull().default('member'),
+    password_hash: text('password_hash').notNull(),
+    person: text('person'),
+    preferences: jsonb('preferences')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    active: boolean('active').notNull().default(true),
+    last_login_at: timestamp('last_login_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('users_username_idx').on(sql`lower(${t.username})`),
+    index('users_person_idx').on(t.person),
   ],
 );

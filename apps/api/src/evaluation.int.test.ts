@@ -25,6 +25,7 @@ import { createChannel, createPlace, createRecipient, createRule } from './servi
 import { notionItems } from './db/schema.js';
 import { queryEvents } from './services/events.js';
 import { buildApp, type App } from './http/app.js';
+import { createUser, ensureBootstrapAdmin } from './services/users.js';
 
 const ENV = {
   NODE_ENV: 'test',
@@ -100,6 +101,7 @@ beforeAll(async () => {
   const log = createLogger(config);
   ({ db, pool } = createDb(config.DATABASE_URL, 5));
   await runMigrations(db, log);
+  await ensureBootstrapAdmin(db, ENV.ADMIN_USERNAME, ENV.ADMIN_PASSWORD, log);
   secrets = new SecretBox(config.ENCRYPTION_KEY);
   channels = new FakeChannelFactory(secrets);
   notion = new NotionService(db, secrets, log);
@@ -435,7 +437,9 @@ describe('HTTP', () => {
       url: '/v1/auth/me',
       cookies: { gr_session: cookie.value },
     });
-    expect(me.json()).toEqual({ kind: 'session', username: 'admin' });
+    expect(me.json().kind).toBe('session');
+    expect(me.json().role).toBe('admin');
+    expect(me.json().user.username).toBe('admin');
     const bad = await app.inject({
       method: 'POST',
       url: '/v1/auth/login',
@@ -460,5 +464,129 @@ describe('HTTP', () => {
       headers: { 'x-api-key': ENV.API_KEY },
     });
     expect(events.statusCode).toBe(200);
+  });
+});
+
+describe('profiles & roles', () => {
+  const login = async (username: string, password: string) => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/auth/login',
+      payload: { username, password },
+    });
+    expect(res.statusCode).toBe(200);
+    return { gr_session: res.cookies.find((c) => c.name === 'gr_session')!.value };
+  };
+
+  it('admin manages profiles; members are read-only except their own profile', async () => {
+    const admin = await login('admin', 'admin-password');
+    const created = await app.inject({
+      method: 'POST',
+      url: '/v1/users',
+      cookies: admin,
+      payload: {
+        username: 'maria',
+        display_name: 'Maria',
+        role: 'member',
+        person: 'maria',
+        password: 'maria-secret-1',
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const memberId = created.json().id as string;
+
+    const member = await login('maria', 'maria-secret-1');
+    // read allowed
+    expect(
+      (await app.inject({ method: 'GET', url: '/v1/places', cookies: member })).statusCode,
+    ).toBe(200);
+    // writes on configuration forbidden
+    const write = await app.inject({
+      method: 'POST',
+      url: '/v1/places',
+      cookies: member,
+      payload: { name: 'X', lat: 1, lng: 1 },
+    });
+    expect(write.statusCode).toBe(403);
+    expect(
+      (await app.inject({ method: 'GET', url: '/v1/users', cookies: member })).statusCode,
+    ).toBe(403);
+    // own profile editable
+    const me = await app.inject({
+      method: 'PUT',
+      url: '/v1/me',
+      cookies: member,
+      payload: {
+        display_name: 'Maria P.',
+        preferences: {
+          theme: 'dark',
+          language: 'ro',
+          notifications_enabled: true,
+          apps: { calendar: { reminders: 'all' } },
+        },
+      },
+    });
+    expect(me.statusCode).toBe(200);
+    expect(me.json().display_name).toBe('Maria P.');
+    expect(me.json().preferences.apps.calendar.reminders).toBe('all');
+    const pw = await app.inject({
+      method: 'PUT',
+      url: '/v1/me/password',
+      cookies: member,
+      payload: { current_password: 'wrong', new_password: 'another-secret-1' },
+    });
+    expect(pw.statusCode).toBe(403);
+    // last admin protection
+    const adminSelf = (
+      await app.inject({ method: 'GET', url: '/v1/auth/me', cookies: admin })
+    ).json().user.id as string;
+    const demote = await app.inject({
+      method: 'PUT',
+      url: `/v1/users/${adminSelf}`,
+      cookies: admin,
+      payload: {
+        username: 'admin',
+        display_name: 'Administrator',
+        role: 'member',
+        person: null,
+        active: true,
+      },
+    });
+    expect(demote.statusCode).toBe(403);
+    // deactivated user loses access immediately
+    await app.inject({
+      method: 'PUT',
+      url: `/v1/users/${memberId}`,
+      cookies: admin,
+      payload: {
+        username: 'maria',
+        display_name: 'Maria',
+        role: 'member',
+        person: 'maria',
+        active: false,
+      },
+    });
+    expect((await app.inject({ method: 'GET', url: '/v1/me', cookies: member })).statusCode).toBe(
+      401,
+    );
+    await app.inject({ method: 'DELETE', url: `/v1/users/${memberId}`, cookies: admin });
+  });
+
+  it('a user who switched notifications off is not notified', async () => {
+    await approachRule();
+    const u = await createUser(db, {
+      username: 'alexuser',
+      display_name: 'Alex',
+      role: 'member',
+      person: 'alex',
+      preferences: { theme: 'system', language: 'en', notifications_enabled: false, apps: {} },
+      active: true,
+      password: 'alex-secret-1',
+    });
+    const r = await evaluator.processFix(fix(east(400)));
+    expect(r.notifications).toBe(0);
+    const { items } = await queryEvents(db, { limit: 1 });
+    expect(items[0]?.reason).toMatch(/notifications disabled/);
+    await db.execute(sql`DELETE FROM users WHERE id = ${u.id}`);
   });
 });

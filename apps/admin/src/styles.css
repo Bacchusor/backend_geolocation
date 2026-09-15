@@ -421,3 +421,13 @@ pre {
 :root[data-theme='dark'] .maplibregl-ctrl button span {
   filter: invert(1);
 }
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+}
+.user-chip.active {
+  background: var(--accent-bg);
+}

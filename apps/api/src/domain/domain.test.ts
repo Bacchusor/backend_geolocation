@@ -5,6 +5,7 @@ import { checkPlausibility, haversineM } from './plausibility.js';
 import { EMPTY_STATE, forceTransition, stepPlaceState } from './geofence.js';
 import { SecretBox, safeEqual } from '../crypto.js';
 import { parseEwkbPoint } from '../db/geo.js';
+import { hashPassword, verifyPassword } from '../auth/password.js';
 
 const TZ = 'Europe/Bucharest';
 
@@ -198,5 +199,15 @@ describe('ewkb', () => {
     const p = parseEwkbPoint(buf.toString('hex'));
     expect(p.lng).toBeCloseTo(26.1025, 4);
     expect(p.lat).toBeCloseTo(44.4268, 4);
+  });
+});
+
+describe('password hashing', () => {
+  it('verifies the right password and rejects others', async () => {
+    const h = await hashPassword('correct horse');
+    expect(h.startsWith('scrypt$')).toBe(true);
+    expect(await verifyPassword('correct horse', h)).toBe(true);
+    expect(await verifyPassword('wrong', h)).toBe(false);
+    expect(await verifyPassword('correct horse', 'garbage')).toBe(false);
   });
 });

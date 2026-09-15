@@ -44,6 +44,8 @@ import { notionRoutes } from './routes/notion.js';
 import { eventRoutes } from './routes/events.js';
 import { geocodeRoutes } from './routes/geocode.js';
 import { haRoutes } from './routes/ha.js';
+import { userRoutes } from './routes/users.js';
+import { ForbiddenError } from '../services/users.js';
 
 export interface AppDeps {
   config: Config;
@@ -121,7 +123,7 @@ export async function buildApp(deps: AppDeps): Promise<App> {
   });
   await app.register(swaggerUi, { routePrefix: '/docs' });
 
-  registerAuth(app, config, sessions);
+  registerAuth(app, config, sessions, deps.db);
 
   app.setErrorHandler((err, request, reply) => {
     if (hasZodFastifySchemaValidationErrors(err)) {
@@ -139,6 +141,8 @@ export async function buildApp(deps: AppDeps): Promise<App> {
       return reply.code(404).send({ error: 'not_found', message: err.message });
     if (err instanceof ConflictError)
       return reply.code(409).send({ error: 'conflict', message: err.message });
+    if (err instanceof ForbiddenError)
+      return reply.code(403).send({ error: 'forbidden', message: err.message });
     if (err instanceof HaError || err instanceof NotionError) {
       return reply.code(502).send({ error: 'upstream', message: err.message });
     }
@@ -165,6 +169,7 @@ export async function buildApp(deps: AppDeps): Promise<App> {
   await app.register(eventRoutes);
   await app.register(geocodeRoutes);
   await app.register(haRoutes);
+  await app.register(userRoutes);
 
   return app;
 }

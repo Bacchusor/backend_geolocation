@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export type Theme = 'light' | 'dark';
 const STORAGE_KEY = 'gr_theme';
@@ -16,9 +16,14 @@ function systemTheme(): Theme {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-/** Applies `data-theme` on <html>; follows the OS preference until the user picks one. */
-export function useTheme(): [Theme, () => void] {
-  const [theme, setTheme] = useState<Theme>(() => readStoredTheme() ?? systemTheme());
+export type SetTheme = (theme: Theme, opts?: { persist?: boolean }) => void;
+
+/**
+ * Applies `data-theme` on <html>. Priority: choice made on this device (persisted) > profile
+ * preference (applied by the app after login, not persisted) > OS preference.
+ */
+export function useTheme(): [Theme, () => void, SetTheme] {
+  const [theme, setThemeState] = useState<Theme>(() => readStoredTheme() ?? systemTheme());
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -27,21 +32,29 @@ export function useTheme(): [Theme, () => void] {
   useEffect(() => {
     if (readStoredTheme()) return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = () => setTheme(mq.matches ? 'dark' : 'light');
+    const onChange = () => setThemeState(mq.matches ? 'dark' : 'light');
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
   }, []);
 
-  const toggle = () => {
-    const next: Theme = theme === 'dark' ? 'light' : 'dark';
+  const setTheme = useCallback<SetTheme>((next, opts) => {
+    if (opts?.persist === false) {
+      if (!readStoredTheme()) setThemeState(next);
+      return;
+    }
     try {
       localStorage.setItem(STORAGE_KEY, next);
     } catch {
       /* private mode: keep it for this session only */
     }
-    setTheme(next);
-  };
-  return [theme, toggle];
+    setThemeState(next);
+  }, []);
+
+  const toggle = useCallback(
+    () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+    [theme, setTheme],
+  );
+  return [theme, toggle, setTheme];
 }
 
 export function ThemeToggle({ theme, onToggle }: { theme: Theme; onToggle: () => void }) {

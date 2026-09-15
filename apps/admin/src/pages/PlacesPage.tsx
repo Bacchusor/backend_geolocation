@@ -26,7 +26,7 @@ const DEFAULTS: PlaceInput = {
   notion_url: null,
 };
 
-export function PlacesPage() {
+export function PlacesPage({ readOnly = false }: { readOnly?: boolean }) {
   const qc = useQueryClient();
   const places = useQuery({ queryKey: ['places'], queryFn: api.places.list });
   const persons = useQuery({
@@ -150,6 +150,7 @@ export function PlacesPage() {
   };
   const onMapClick = useCallback(
     (lat: number, lng: number) => {
+      if (readOnly) return;
       if (mode === 'idle') startCreate(lat, lng);
       else {
         form.setValue('lat', Number(lat.toFixed(6)), { shouldDirty: true });
@@ -157,7 +158,7 @@ export function PlacesPage() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mode, form],
+    [mode, form, readOnly],
   );
   const onSelect = useCallback((p: Place) => {
     setSelectedId(p.id);
@@ -187,16 +188,20 @@ export function PlacesPage() {
           </span>
         )}
         <div className="spacer" />
-        <button
-          className="btn"
-          onClick={() => zoneSyncAll.mutate()}
-          disabled={zoneSyncAll.isPending}
-        >
-          Sync HA zones
-        </button>
-        <button className="btn primary" onClick={() => startCreate()}>
-          + New place
-        </button>
+        {!readOnly && (
+          <>
+            <button
+              className="btn"
+              onClick={() => zoneSyncAll.mutate()}
+              disabled={zoneSyncAll.isPending}
+            >
+              Sync HA zones
+            </button>
+            <button className="btn primary" onClick={() => startCreate()}>
+              + New place
+            </button>
+          </>
+        )}
       </div>
       {message && <Alert kind={message.kind}>{message.text}</Alert>}
       {consistency.data &&
@@ -230,8 +235,10 @@ export function PlacesPage() {
             onMapClick={onMapClick}
           />
           <p className="small muted">
-            Click the map to create a place; while editing, a click moves the pin. Solid circle =
-            enter radius, dashed = approach radius.
+            {readOnly
+              ? 'Read-only view (member).'
+              : 'Click the map to create a place; while editing, a click moves the pin.'}{' '}
+            Solid circle = enter radius, dashed = approach radius.
           </p>
           <div className="panel">
             <table>
@@ -274,12 +281,14 @@ export function PlacesPage() {
                       )}
                     </td>
                     <td>
-                      <button
-                        className="btn sm"
-                        onClick={(e) => (e.stopPropagation(), startEdit(p))}
-                      >
-                        Edit
-                      </button>
+                      {!readOnly && (
+                        <button
+                          className="btn sm"
+                          onClick={(e) => (e.stopPropagation(), startEdit(p))}
+                        >
+                          Edit
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -334,26 +343,28 @@ export function PlacesPage() {
                   )}
                 </ul>
               </div>
-              <div className="row">
-                <button className="btn primary" onClick={() => startEdit(selected)}>
-                  Edit
-                </button>
-                <button
-                  className="btn"
-                  onClick={() => api.places.zoneSync(selected.id).then(invalidate)}
-                >
-                  Re-sync HA zone
-                </button>
-                <button
-                  className="btn danger"
-                  onClick={() =>
-                    confirm(`Delete "${selected.name}" and its rules?`) &&
-                    remove.mutate(selected.id)
-                  }
-                >
-                  Delete
-                </button>
-              </div>
+              {!readOnly && (
+                <div className="row">
+                  <button className="btn primary" onClick={() => startEdit(selected)}>
+                    Edit
+                  </button>
+                  <button
+                    className="btn"
+                    onClick={() => api.places.zoneSync(selected.id).then(invalidate)}
+                  >
+                    Re-sync HA zone
+                  </button>
+                  <button
+                    className="btn danger"
+                    onClick={() =>
+                      confirm(`Delete "${selected.name}" and its rules?`) &&
+                      remove.mutate(selected.id)
+                    }
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           )}
           {mode !== 'idle' && (

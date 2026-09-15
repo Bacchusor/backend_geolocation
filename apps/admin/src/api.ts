@@ -16,6 +16,9 @@ import type {
   Rule,
   RuleEvent,
   RuleInput,
+  User,
+  UserInput,
+  ProfileUpdate,
 } from '@georeminder/shared';
 
 /** The admin is served behind nginx which proxies /api -> API container (Vite dev does the same). */
@@ -60,9 +63,12 @@ type List<T> = { items: T[] };
 export const api = {
   auth: {
     login: (username: string, password: string) =>
-      post<{ ok: true; username: string }>('/v1/auth/login', { username, password }),
+      post<{ ok: true; user: User }>('/v1/auth/login', { username, password }),
     logout: () => post<{ ok: true }>('/v1/auth/logout'),
-    me: () => get<{ kind: 'api_key' | 'session'; username: string | null }>('/v1/auth/me'),
+    me: () =>
+      get<{ kind: 'api_key' | 'session'; role: 'admin' | 'member'; user: User | null }>(
+        '/v1/auth/me',
+      ),
   },
   places: {
     list: () => get<List<Place>>('/v1/places'),
@@ -130,6 +136,18 @@ export const api = {
       del<{ ok: true; events_deleted: number }>(
         `/v1/location?person=${encodeURIComponent(person)}`,
       ),
+  },
+  users: {
+    list: () => get<List<User>>('/v1/users'),
+    create: (input: UserInput) => post<User>('/v1/users', input),
+    update: (id: string, input: UserInput) => put<User>(`/v1/users/${id}`, input),
+    remove: (id: string) => del<{ ok: true }>(`/v1/users/${id}`),
+  },
+  me: {
+    get: () => get<User>('/v1/me'),
+    update: (input: ProfileUpdate) => put<User>('/v1/me', input),
+    changePassword: (current_password: string, new_password: string) =>
+      put<{ ok: true }>('/v1/me/password', { current_password, new_password }),
   },
   geocode: (q: string) =>
     get<List<{ display_name: string; lat: number; lng: number }>>(

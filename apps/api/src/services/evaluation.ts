@@ -29,6 +29,7 @@ import {
   type ApplicableRule,
 } from './repos.js';
 import type { NotionService } from './notion-sync.js';
+import { notificationsEnabledFor } from './users.js';
 import type { ChannelFactory, DeliveryResult } from './channels.js';
 import type { Config } from '../config.js';
 import type { Logger } from '../logger.js';
@@ -324,6 +325,9 @@ export class Evaluator {
     const targets = rule.recipients.filter((r) => r.active && r.person === person);
     if (targets.length === 0)
       return skip(`no active recipient for person "${person}" on this rule`);
+
+    const pref = await notificationsEnabledFor(db, person);
+    if (!pref.enabled) return skip(`notifications disabled in the profile of user "${pref.user}"`);
 
     const window = isWithinWindow(rule, now, config.TZ);
     if (!window.ok) return skip(window.reason ?? 'outside time window');
