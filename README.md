@@ -234,7 +234,8 @@ object is free-form so the calendar app can keep its own settings per user. Mach
 
 1. notion.so/profile/integrations → new internal integration → copy the token (`ntn_…`).
 2. Open the shopping database → ⋯ → Connections → add the integration.
-3. Database properties: `Name` (title), `Needed` (checkbox), `Shop` (select), `Category` (select). Names are
+3. Database properties: `Name` (title), `Needed` (checkbox), `Shop` (select or multi-select), `Category` (select or
+   multi-select). An item tagged with several shops is matched at each of them. Names are
    configurable in the admin (Notion → property mapping), including which checkbox state means "needed".
 4. Admin → Notion → paste token + database URL → Test connection → Save → Sync now. Automatic sync runs at the
    configured interval (default 5 min) inside the API.

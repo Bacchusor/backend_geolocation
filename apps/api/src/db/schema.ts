@@ -176,6 +176,14 @@ export const notionItems = pgTable(
     name: text('name').notNull(),
     shop: text('shop'),
     category: text('category'),
+    shops: text('shops')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    categories: text('categories')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     needed: boolean('needed').notNull().default(true),
     url: text('url'),
     last_edited_at: timestamp('last_edited_at', { withTimezone: true }),

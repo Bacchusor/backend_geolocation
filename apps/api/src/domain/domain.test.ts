@@ -6,6 +6,8 @@ import { EMPTY_STATE, forceTransition, stepPlaceState } from './geofence.js';
 import { SecretBox, safeEqual } from '../crypto.js';
 import { parseEwkbPoint } from '../db/geo.js';
 import { hashPassword, verifyPassword } from '../auth/password.js';
+import { pageToItem } from '../integrations/notion.js';
+import { DEFAULT_NOTION_MAPPING } from '@georeminder/shared';
 
 const TZ = 'Europe/Bucharest';
 
@@ -209,5 +211,28 @@ describe('password hashing', () => {
     expect(await verifyPassword('correct horse', h)).toBe(true);
     expect(await verifyPassword('wrong', h)).toBe(false);
     expect(await verifyPassword('correct horse', 'garbage')).toBe(false);
+  });
+});
+
+describe('notion page mapping', () => {
+  it('reads select and multi-select shops/categories', () => {
+    const page = {
+      id: 'p',
+      url: 'https://notion.so/p',
+      properties: {
+        Name: { type: 'title', title: [{ plain_text: 'Soap' }] },
+        Needed: { type: 'checkbox', checkbox: false },
+        Shop: { type: 'multi_select', multi_select: [{ name: 'DM' }, { name: 'Lidl' }] },
+        Category: { type: 'select', select: { name: 'Bathroom' } },
+      },
+    };
+    const item = pageToItem(page, { ...DEFAULT_NOTION_MAPPING, needed_means_true: false });
+    expect(item).toMatchObject({
+      name: 'Soap',
+      shops: ['DM', 'Lidl'],
+      shop: 'DM, Lidl',
+      categories: ['Bathroom'],
+      needed: true,
+    });
   });
 });

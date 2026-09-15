@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, asc, eq, notInArray, sql } from 'drizzle-orm';
 import {
   DEFAULT_NOTION_MAPPING,
   notionPropertyMappingSchema,
@@ -142,6 +142,8 @@ export class NotionService {
             name: it.name,
             shop: it.shop,
             category: it.category,
+            shops: it.shops,
+            categories: it.categories,
             needed: it.needed,
             url: it.url,
             last_edited_at: it.last_edited_at ? new Date(it.last_edited_at) : null,
@@ -186,16 +188,15 @@ export class NotionService {
     place: Pick<Place, 'notion_shop' | 'notion_categories'>,
   ): Promise<NotionItem[]> {
     if (!place.notion_shop) return [];
+    // An item may belong to several shops / categories (Notion multi-select): match any of them.
     const conds = [
       eq(notionItems.needed, true),
-      sql`lower(${notionItems.shop}) = lower(${place.notion_shop})`,
+      sql`EXISTS (SELECT 1 FROM unnest(${notionItems.shops}) s WHERE lower(s) = lower(${place.notion_shop}))`,
     ];
     if (place.notion_categories.length) {
+      const wanted = place.notion_categories.map((c) => c.toLowerCase());
       conds.push(
-        inArray(
-          sql`lower(${notionItems.category})`,
-          place.notion_categories.map((c) => c.toLowerCase()),
-        ),
+        sql`EXISTS (SELECT 1 FROM unnest(${notionItems.categories}) c WHERE lower(c) = ANY(${wanted}))`,
       );
     }
     const rows = await this.db
@@ -227,7 +228,11 @@ export class NotionService {
       };
     } catch (err) {
       // Fall back to the cached items' shop values when Notion is unreachable.
-      const cached = await this.db.selectDistinct({ shop: notionItems.shop }).from(notionItems);
+      const cached = (
+        await this.db.execute(
+          sql`SELECT DISTINCT s AS shop FROM ${notionItems}, unnest(${notionItems.shops}) s`,
+        )
+      ).rows as Array<{ shop: string }>;
       const shops = cached.map((c) => c.shop).filter((s): s is string => !!s);
       const bound = new Set(
         placeRows.map((p) => p.shop?.toLowerCase()).filter((s): s is string => !!s),
@@ -276,6 +281,8 @@ const rowToItem = (r: typeof notionItems.$inferSelect): NotionItem => ({
   name: r.name,
   shop: r.shop,
   category: r.category,
+  shops: r.shops,
+  categories: r.categories,
   needed: r.needed,
   url: r.url,
   last_edited_at: r.last_edited_at?.toISOString() ?? null,

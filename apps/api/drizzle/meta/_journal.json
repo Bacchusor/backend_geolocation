@@ -22,6 +22,13 @@
       "when": 1789450741347,
       "tag": "0002_users",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789452043700,
+      "tag": "0003_notion_multi",
+      "breakpoints": true
     }
   ]
 }

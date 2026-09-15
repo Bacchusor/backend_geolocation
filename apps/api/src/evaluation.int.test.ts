@@ -21,7 +21,13 @@ import {
   type NotificationMessage,
 } from './services/channels.js';
 import { NominatimClient } from './integrations/nominatim.js';
-import { createChannel, createPlace, createRecipient, createRule } from './services/repos.js';
+import {
+  createChannel,
+  createGroup,
+  createPlace,
+  createRecipient,
+  createRule,
+} from './services/repos.js';
 import { notionItems } from './db/schema.js';
 import { queryEvents } from './services/events.js';
 import { buildApp, type App } from './http/app.js';
@@ -164,9 +170,33 @@ beforeEach(async () => {
   });
   placeId = place.id;
   await db.insert(notionItems).values([
-    { page_id: 'p1', name: 'Milk', shop: 'Lidl', category: 'Kitchen', needed: true },
-    { page_id: 'p2', name: 'Soap', shop: 'Lidl', category: 'Bathroom', needed: true },
-    { page_id: 'p3', name: 'Beer', shop: 'Kaufland', category: 'Kitchen', needed: true },
+    {
+      page_id: 'p1',
+      name: 'Milk',
+      shop: 'Lidl',
+      shops: ['Lidl'],
+      category: 'Kitchen',
+      categories: ['Kitchen'],
+      needed: true,
+    },
+    {
+      page_id: 'p2',
+      name: 'Soap',
+      shop: 'DM, Lidl',
+      shops: ['DM', 'Lidl'],
+      category: 'Bathroom',
+      categories: ['Bathroom'],
+      needed: true,
+    },
+    {
+      page_id: 'p3',
+      name: 'Beer',
+      shop: 'Kaufland',
+      shops: ['Kaufland'],
+      category: 'Kitchen',
+      categories: ['Kitchen'],
+      needed: true,
+    },
   ]);
 });
 
@@ -464,6 +494,37 @@ describe('HTTP', () => {
       headers: { 'x-api-key': ENV.API_KEY },
     });
     expect(events.statusCode).toBe(200);
+  });
+});
+
+describe('groups and multi-shop items', () => {
+  it('rules attached to a place group fire for member places', async () => {
+    const group = await createGroup(db, { name: 'Supermarkets', place_ids: [placeId] });
+    await createRule(db, {
+      name: 'group approach',
+      place_id: null,
+      place_group_id: group.id,
+      trigger: 'approach',
+      recipient_ids: [recipientId],
+      window_start: null,
+      window_end: null,
+      days_of_week: [0, 1, 2, 3, 4, 5, 6],
+      cooldown_seconds: 0,
+      max_per_day: 0,
+      enabled: true,
+    });
+    const r = await evaluator.processFix(fix(east(400)));
+    expect(r.notifications).toBe(1);
+  });
+
+  it('an item tagged with several shops is matched at each of them, categories filter applies', async () => {
+    const items = await notion.itemsForPlace({ notion_shop: 'dm', notion_categories: [] });
+    expect(items.map((i) => i.name)).toEqual(['Soap']);
+    const kitchenOnly = await notion.itemsForPlace({
+      notion_shop: 'Lidl',
+      notion_categories: ['kitchen'],
+    });
+    expect(kitchenOnly.map((i) => i.name)).toEqual(['Milk']);
   });
 });
 

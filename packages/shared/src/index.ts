@@ -233,6 +233,8 @@ export const notionItemSchema = z.object({
   name: z.string(),
   shop: z.string().nullable(),
   category: z.string().nullable(),
+  shops: z.array(z.string()),
+  categories: z.array(z.string()),
   needed: z.boolean(),
   url: z.string().nullable(),
   last_edited_at: isoDate.nullable(),

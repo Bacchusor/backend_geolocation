@@ -528,7 +528,7 @@ export async function rulesForPlace(
         eq(rules.enabled, true),
         eq(rules.trigger, trigger),
         groupIds.length
-          ? sql`(${rules.place_id} = ${placeId} OR ${rules.place_group_id} IN ${groupIds})`
+          ? sql`(${rules.place_id} = ${placeId} OR ${rules.place_group_id} = ANY(${groupIds}))`
           : eq(rules.place_id, placeId),
       ),
     )

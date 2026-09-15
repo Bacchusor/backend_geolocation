@@ -7,8 +7,11 @@ const NOTION_VERSION = '2025-09-03';
 export interface NotionNeededItem {
   page_id: string;
   name: string;
+  /** Joined for display ("DM, Lidl"); `shops` / `categories` hold the individual values. */
   shop: string | null;
   category: string | null;
+  shops: string[];
+  categories: string[];
   needed: boolean;
   url: string | null;
   last_edited_at: string | null;
@@ -23,7 +26,13 @@ interface DataSourceResponse {
   id: string;
   properties: Record<
     string,
-    { id: string; type: string; select?: { options: Array<{ name: string }> } }
+    {
+      id: string;
+      type: string;
+      select?: { options: Array<{ name: string }> };
+      multi_select?: { options: Array<{ name: string }> };
+      status?: { options: Array<{ name: string }> };
+    }
   >;
 }
 interface PageResponse {
@@ -116,7 +125,9 @@ export class NotionShoppingClient {
     const properties = Object.entries(ds.properties).map(([name, p]) => ({
       name,
       type: p.type,
-      ...(p.select ? { options: p.select.options.map((o) => o.name) } : {}),
+      ...((p.select ?? p.multi_select ?? p.status)
+        ? { options: (p.select ?? p.multi_select ?? p.status)!.options.map((o) => o.name) }
+        : {}),
     }));
     const options = (prop: string) => properties.find((p) => p.name === prop)?.options ?? [];
     return {
@@ -174,12 +185,25 @@ function plainText(v: PropertyValue | undefined): string | null {
   return null;
 }
 
+/** All values of a property as a list (select → one, multi_select → many, text → one). */
+function listValues(v: PropertyValue | undefined): string[] {
+  if (!v) return [];
+  if (v.type === 'multi_select')
+    return (v as { multi_select: Array<{ name: string }> }).multi_select
+      .map((o) => o.name.trim())
+      .filter(Boolean);
+  const single = plainText(v);
+  return single ? [single] : [];
+}
+
 export function pageToItem(
   page: PageResponse,
   mapping: NotionPropertyMapping,
 ): NotionNeededItem | null {
   const name = plainText(page.properties[mapping.title]);
   if (!name) return null;
+  const shops = listValues(page.properties[mapping.shop]);
+  const categories = listValues(page.properties[mapping.category]);
   const neededProp = page.properties[mapping.needed];
   const neededRaw =
     neededProp && neededProp.type === 'checkbox'
@@ -188,8 +212,10 @@ export function pageToItem(
   return {
     page_id: page.id,
     name,
-    shop: plainText(page.properties[mapping.shop]),
-    category: plainText(page.properties[mapping.category]),
+    shop: shops.join(', ') || null,
+    category: categories.join(', ') || null,
+    shops,
+    categories,
     needed: neededRaw === mapping.needed_means_true,
     url: page.url ?? null,
     last_edited_at: page.last_edited_time ?? null,
