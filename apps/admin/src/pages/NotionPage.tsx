@@ -79,13 +79,13 @@ export function NotionPage() {
   });
 
   const c = config.data;
-  const propOptions = (type?: string) =>
-    schema.data?.properties.filter((p) => !type || p.type === type).map((p) => p.name) ?? [];
+  const propOptions = (types: string[]) =>
+    schema.data?.properties.filter((p) => types.includes(p.type)).map((p) => p.name) ?? [];
   const selectOrInput = (
     name: 'mapping.title' | 'mapping.needed' | 'mapping.shop' | 'mapping.category',
-    type: string,
+    types: string[],
   ) => {
-    const opts = propOptions(type);
+    const opts = propOptions(types);
     return opts.length ? (
       <select {...form.register(name)}>
         {opts.map((o) => (
@@ -158,10 +158,14 @@ export function NotionPage() {
             </Field>
             <h3>Property mapping</h3>
             <div className="grid2">
-              <Field label="Title property">{selectOrInput('mapping.title', 'title')}</Field>
-              <Field label="Needed checkbox">{selectOrInput('mapping.needed', 'checkbox')}</Field>
-              <Field label="Shop select">{selectOrInput('mapping.shop', 'select')}</Field>
-              <Field label="Category select">{selectOrInput('mapping.category', 'select')}</Field>
+              <Field label="Title property">{selectOrInput('mapping.title', ['title'])}</Field>
+              <Field label="Needed checkbox">{selectOrInput('mapping.needed', ['checkbox'])}</Field>
+              <Field label="Shop (where to buy — drives geolocation)">
+                {selectOrInput('mapping.shop', ['multi_select', 'select'])}
+              </Field>
+              <Field label="Category (item type — display only)">
+                {selectOrInput('mapping.category', ['select', 'multi_select'])}
+              </Field>
             </div>
             <label className="check">
               <input type="checkbox" {...form.register('mapping.needed_means_true')} /> Checked box
@@ -196,7 +200,8 @@ export function NotionPage() {
               <li>Open the shopping database → ⋯ → Connections → add the integration.</li>
               <li>
                 Paste the database URL above; properties: Name (title), Needed (checkbox), Shop
-                (select), Category (select).
+                (multi-select: every shop where the item can be bought), Category (optional, item
+                type, display only). Other columns (e.g. Location at home) are ignored.
               </li>
               <li>
                 Each Shop option should match one place on the map (see the consistency check).

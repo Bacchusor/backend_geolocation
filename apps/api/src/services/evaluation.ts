@@ -368,8 +368,7 @@ export class Evaluator {
       shop: place.notion_shop ?? place.name,
       place: place.name,
       person,
-      items: items.map((i) => ({ name: i.name, category: i.category })),
-      groupByCategory: place.group_by_category,
+      items: items.map((i) => i.name),
     });
     const deliveries: DeliveryResult[] = [];
     for (const t of targets) {

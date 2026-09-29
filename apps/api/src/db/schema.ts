@@ -35,13 +35,8 @@ export const places = pgTable(
     color: text('color').notNull().default('#2563eb'),
     active: boolean('active').notNull().default(true),
     notion_shop: text('notion_shop'),
-    notion_categories: text('notion_categories')
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
     notion_min_items: integer('notion_min_items').notNull().default(1),
     message_template: text('message_template').notNull().default('{count} items to buy'),
-    group_by_category: boolean('group_by_category').notNull().default(false),
     notion_url: text('notion_url'),
     ha_zone_id: text('ha_zone_id'),
     ha_zone_entity_id: text('ha_zone_entity_id'),

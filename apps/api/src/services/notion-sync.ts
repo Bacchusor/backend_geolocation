@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, asc, eq, notInArray, sql } from 'drizzle-orm';
 import {
   DEFAULT_NOTION_MAPPING,
   notionPropertyMappingSchema,
@@ -183,27 +183,23 @@ export class NotionService {
     return rows.map(rowToItem);
   }
 
-  /** Cached items relevant to a place: needed, same shop, optionally restricted to categories. */
-  async itemsForPlace(
-    place: Pick<Place, 'notion_shop' | 'notion_categories'>,
-  ): Promise<NotionItem[]> {
+  /**
+   * Cached items relevant to a place: needed and sold at its shop. Only Shop drives matching;
+   * Category (item type) is informational.
+   */
+  async itemsForPlace(place: Pick<Place, 'notion_shop'>): Promise<NotionItem[]> {
     if (!place.notion_shop) return [];
-    // An item may belong to several shops / categories (Notion multi-select): match any of them.
-    const conds = [
-      eq(notionItems.needed, true),
-      sql`EXISTS (SELECT 1 FROM unnest(${notionItems.shops}) s WHERE lower(s) = lower(${place.notion_shop}))`,
-    ];
-    if (place.notion_categories.length) {
-      const wanted = place.notion_categories.map((c) => c.toLowerCase());
-      conds.push(
-        sql`EXISTS (SELECT 1 FROM unnest(${notionItems.categories}) c WHERE ${inArray(sql`lower(c)`, wanted)})`,
-      );
-    }
+    // An item may be sold at several shops (Notion multi-select): match any of them.
     const rows = await this.db
       .select()
       .from(notionItems)
-      .where(and(...conds))
-      .orderBy(asc(notionItems.category), asc(notionItems.name));
+      .where(
+        and(
+          eq(notionItems.needed, true),
+          sql`EXISTS (SELECT 1 FROM unnest(${notionItems.shops}) s WHERE lower(s) = lower(${place.notion_shop}))`,
+        ),
+      )
+      .orderBy(asc(notionItems.name));
     return rows.map(rowToItem);
   }
 

@@ -162,10 +162,8 @@ beforeEach(async () => {
     color: '#ff0000',
     active: true,
     notion_shop: 'Lidl',
-    notion_categories: [],
     notion_min_items: 1,
     message_template: '{count} items for {shop}: {items}',
-    group_by_category: false,
     notion_url: 'https://notion.so/x',
   });
   placeId = place.id;
@@ -227,7 +225,7 @@ describe('rule evaluation (PostGIS)', () => {
     tick(60);
     r = await evaluator.processFix(fix(east(400)));
     expect(r.notifications).toBe(1);
-    expect(channels.sent[0]?.msg.message).toBe('2 items for Lidl: Soap, Milk'); // sorted by category, then name
+    expect(channels.sent[0]?.msg.message).toBe('2 items for Lidl: Milk, Soap'); // sorted by name
     expect(channels.sent[0]?.msg.url).toBe('https://notion.so/x');
     expect(channels.sent[0]?.msg.title).toBe('Lidl'); // title = Notion shop name
 
@@ -517,14 +515,11 @@ describe('groups and multi-shop items', () => {
     expect(r.notifications).toBe(1);
   });
 
-  it('an item tagged with several shops is matched at each of them, categories filter applies', async () => {
-    const items = await notion.itemsForPlace({ notion_shop: 'dm', notion_categories: [] });
-    expect(items.map((i) => i.name)).toEqual(['Soap']);
-    const kitchenOnly = await notion.itemsForPlace({
-      notion_shop: 'Lidl',
-      notion_categories: ['kitchen'],
-    });
-    expect(kitchenOnly.map((i) => i.name)).toEqual(['Milk']);
+  it('an item tagged with several shops is matched at each of them; category is ignored', async () => {
+    const dm = await notion.itemsForPlace({ notion_shop: 'dm' });
+    expect(dm.map((i) => i.name)).toEqual(['Soap']);
+    const lidl = await notion.itemsForPlace({ notion_shop: 'Lidl' });
+    expect(lidl.map((i) => i.name)).toEqual(['Milk', 'Soap']);
   });
 });
 

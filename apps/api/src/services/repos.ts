@@ -57,10 +57,8 @@ export function rowToPlace(r: PlaceRow): Place {
     color: r.color,
     active: r.active,
     notion_shop: r.notion_shop,
-    notion_categories: r.notion_categories,
     notion_min_items: r.notion_min_items,
     message_template: r.message_template,
-    group_by_category: r.group_by_category,
     notion_url: r.notion_url,
     ha_zone_id: r.ha_zone_id,
     ha_zone_entity_id: r.ha_zone_entity_id,
@@ -82,10 +80,8 @@ function placeValues(input: PlaceInput) {
     color: input.color,
     active: input.active,
     notion_shop: input.notion_shop,
-    notion_categories: input.notion_categories,
     notion_min_items: input.notion_min_items,
     message_template: input.message_template,
-    group_by_category: input.group_by_category,
     notion_url: input.notion_url,
   };
 }

@@ -29,6 +29,13 @@
       "when": 1789452043700,
       "tag": "0003_notion_multi",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790674449242,
+      "tag": "0004_places_drop_category",
+      "breakpoints": true
     }
   ]
 }

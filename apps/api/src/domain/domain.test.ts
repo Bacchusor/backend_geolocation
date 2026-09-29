@@ -52,32 +52,20 @@ describe('time window', () => {
 });
 
 describe('message template', () => {
-  const items = [
-    { name: 'Milk', category: 'Kitchen' },
-    { name: 'Soap', category: 'Bathroom' },
-    { name: 'Bread', category: 'Kitchen' },
-  ];
   it('renders placeholders', () => {
     const msg = renderMessage('{count} items for {shop}: {items}', {
       count: 3,
       shop: 'Lidl',
       place: 'Lidl Titan',
       person: 'alex',
-      items,
-      groupByCategory: false,
+      items: ['Milk', 'Soap', 'Bread'],
     });
     expect(msg).toBe('3 items for Lidl: Milk, Soap, Bread');
   });
-  it('groups by category', () => {
-    const msg = renderMessage('{items}', {
-      count: 3,
-      shop: 'Lidl',
-      place: 'p',
-      person: 'a',
-      items,
-      groupByCategory: true,
-    });
-    expect(msg).toBe('Kitchen: Milk, Bread · Bathroom: Soap');
+  it('truncates long item lists', () => {
+    const items = Array.from({ length: 17 }, (_, i) => `i${i}`);
+    const msg = renderMessage('{items}', { count: 17, shop: 'L', place: 'p', person: 'a', items });
+    expect(msg.endsWith('i14 (+2 more)')).toBe(true);
   });
   it('keeps unknown placeholders', () => {
     expect(
@@ -87,7 +75,6 @@ describe('message template', () => {
         place: 'X',
         person: 'a',
         items: [],
-        groupByCategory: false,
       }),
     ).toBe('{nope} X');
   });

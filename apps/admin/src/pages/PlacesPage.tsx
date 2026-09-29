@@ -19,10 +19,8 @@ const DEFAULTS: PlaceInput = {
   color: '#2563eb',
   active: true,
   notion_shop: null,
-  notion_categories: [],
   notion_min_items: 1,
   message_template: '{count} items to buy',
-  group_by_category: false,
   notion_url: null,
 };
 
@@ -172,7 +170,6 @@ export function PlacesPage({ readOnly = false }: { readOnly?: boolean }) {
   }, [message]);
 
   const shopOptions = schema.data?.shop_options ?? [];
-  const categoryOptions = schema.data?.category_options ?? [];
   const activeCount = places.data?.items.filter((p) => p.active).length ?? 0;
 
   return (
@@ -270,12 +267,7 @@ export function PlacesPage({ readOnly = false }: { readOnly?: boolean }) {
                     <td>
                       {p.enter_radius_m} / {p.approach_radius_m}
                     </td>
-                    <td>
-                      {p.notion_shop ?? <span className="muted">—</span>}
-                      {p.notion_categories.length > 0 && (
-                        <div className="small muted">{p.notion_categories.join(', ')}</div>
-                      )}
-                    </td>
+                    <td>{p.notion_shop ?? <span className="muted">—</span>}</td>
                     <td>
                       {p.ha_zone_error ? (
                         <Badge kind="err">error</Badge>
@@ -454,64 +446,17 @@ export function PlacesPage({ readOnly = false }: { readOnly?: boolean }) {
                   }
                 />
               </Field>
-              <Field label="Categories (empty = all)">
-                <Controller
-                  control={form.control}
-                  name="notion_categories"
-                  render={({ field }) =>
-                    categoryOptions.length ? (
-                      <div className="row">
-                        {categoryOptions.map((c) => (
-                          <label key={c} className="check">
-                            <input
-                              type="checkbox"
-                              checked={(field.value ?? []).includes(c)}
-                              onChange={(e) =>
-                                field.onChange(
-                                  e.target.checked
-                                    ? [...(field.value ?? []), c]
-                                    : (field.value ?? []).filter((x) => x !== c),
-                                )
-                              }
-                            />
-                            {c}
-                          </label>
-                        ))}
-                      </div>
-                    ) : (
-                      <input
-                        placeholder="Kitchen, Bathroom"
-                        value={(field.value ?? []).join(', ')}
-                        onChange={(e) =>
-                          field.onChange(
-                            e.target.value
-                              .split(',')
-                              .map((s) => s.trim())
-                              .filter(Boolean),
-                          )
-                        }
-                      />
-                    )
-                  }
+              <Field
+                label="Minimum items to trigger"
+                error={form.formState.errors.notion_min_items}
+              >
+                <input
+                  type="number"
+                  {...form.register('notion_min_items', { valueAsNumber: true })}
                 />
               </Field>
-              <div className="grid2">
-                <Field
-                  label="Minimum items to trigger"
-                  error={form.formState.errors.notion_min_items}
-                >
-                  <input
-                    type="number"
-                    {...form.register('notion_min_items', { valueAsNumber: true })}
-                  />
-                </Field>
-                <label className="check" style={{ alignSelf: 'end' }}>
-                  <input type="checkbox" {...form.register('group_by_category')} /> Group items by
-                  category
-                </label>
-              </div>
               <Field
-                label="Message template ({count} {shop} {items} {place} {person} {categories})"
+                label="Message template ({count} {shop} {items} {place} {person})"
                 error={form.formState.errors.message_template}
               >
                 <textarea rows={2} {...form.register('message_template')} />

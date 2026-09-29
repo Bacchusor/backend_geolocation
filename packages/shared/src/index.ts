@@ -41,10 +41,8 @@ export const placeInputSchema = z
     color: hexColor.default('#2563eb'),
     active: z.boolean().default(true),
     notion_shop: z.string().trim().max(120).nullable().default(null),
-    notion_categories: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
     notion_min_items: z.number().int().min(1).max(1000).default(1),
     message_template: z.string().max(500).default('{count} items to buy'),
-    group_by_category: z.boolean().default(false),
     notion_url: z.url().max(2000).nullable().default(null),
   })
   .refine((p) => p.approach_radius_m >= p.enter_radius_m, {
@@ -65,10 +63,8 @@ export const placeSchema = z.object({
   color: z.string(),
   active: z.boolean(),
   notion_shop: z.string().nullable(),
-  notion_categories: z.array(z.string()),
   notion_min_items: z.number().int(),
   message_template: z.string(),
-  group_by_category: z.boolean(),
   notion_url: z.string().nullable(),
   ha_zone_id: z.string().nullable(),
   ha_zone_entity_id: z.string().nullable(),
