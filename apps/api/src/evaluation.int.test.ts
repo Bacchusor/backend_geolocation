@@ -485,7 +485,7 @@ describe('HTTP', () => {
       url: `/v1/places/${placeId}/items`,
       headers: { 'x-api-key': ENV.API_KEY },
     });
-    expect(items.json().items.map((i: { name: string }) => i.name)).toEqual(['Soap', 'Milk']);
+    expect(items.json().items.map((i: { name: string }) => i.name)).toEqual(['Milk', 'Soap']);
     const events = await app.inject({
       method: 'GET',
       url: '/v1/events?person=alex',
