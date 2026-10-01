@@ -2,8 +2,8 @@ import { asc, eq } from 'drizzle-orm';
 import type { Place } from '@georeminder/shared';
 import type { Db } from '../db/client.js';
 import { channels } from '../db/schema.js';
-import { HomeAssistantClient, haSlugify, type HaZone } from '../integrations/home-assistant.js';
-import { listPlaces, setPlaceZone } from './repos.js';
+import { HomeAssistantClient, type HaZone } from '../integrations/home-assistant.js';
+import { listPlaces, setPlaceZone, zoneBindingsOfOtherPlaces } from './repos.js';
 import type { SecretBox } from '../crypto.js';
 import type { Config } from '../config.js';
 import type { Logger } from '../logger.js';
@@ -46,10 +46,6 @@ export class ZoneSync {
     return prefix ? `${prefix} ${place.name}` : place.name;
   }
 
-  entityId(place: Place): string {
-    return `zone.${haSlugify(this.zoneName(place))}`;
-  }
-
   private zoneInput(place: Place) {
     return {
       name: this.zoneName(place),
@@ -75,8 +71,15 @@ export class ZoneSync {
         });
         return { ...place, ha_zone_id: null, ha_zone_entity_id: null, ha_zone_error: null };
       }
+      // A zone belongs to one place. Never update or adopt a zone another place is bound to;
+      // when two places share an id (seen after a place was created with a duplicate name and
+      // renamed), the older place keeps the zone and the newer one gets its own.
+      const others = await zoneBindingsOfOtherPlaces(this.db, place.id);
+      const ownedByOlder = (id: string) =>
+        others.some((o) => o.ha_zone_id === id && o.created_at < new Date(place.created_at));
+      const boundElsewhere = (id: string) => others.some((o) => o.ha_zone_id === id);
       let zone: HaZone | null = null;
-      if (place.ha_zone_id) {
+      if (place.ha_zone_id && !ownedByOlder(place.ha_zone_id)) {
         zone = await ha.updateZone(place.ha_zone_id, this.zoneInput(place)).catch((err) => {
           if (isNotFound(err)) return null;
           throw err;
@@ -84,12 +87,15 @@ export class ZoneSync {
       }
       if (!zone) {
         // Adopt an existing zone with the same name (e.g. after a DB restore) before creating one.
-        const existing = (await ha.listZones()).find((z) => z.name === this.zoneName(place));
+        const existing = (await ha.listZones()).find(
+          (z) => z.name === this.zoneName(place) && !boundElsewhere(z.id),
+        );
         zone = existing
           ? await ha.updateZone(existing.id, this.zoneInput(place))
           : await ha.createZone(this.zoneInput(place));
       }
-      const entity = this.entityId(place);
+      // HA derives the entity id from the zone id at creation and keeps it across renames.
+      const entity = `zone.${zone.id}`;
       await setPlaceZone(this.db, place.id, {
         ha_zone_id: zone.id,
         ha_zone_entity_id: entity,

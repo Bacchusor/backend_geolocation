@@ -15,6 +15,12 @@ import { Evaluator } from './services/evaluation.js';
 import { NotionService } from './services/notion-sync.js';
 import { ZoneSync } from './services/ha-zones.js';
 import {
+  haSlugify,
+  type HaZone,
+  type HaZoneInput,
+  type HomeAssistantClient,
+} from './integrations/home-assistant.js';
+import {
   ChannelFactory,
   type DeliveryResult,
   type NotificationChannel,
@@ -27,6 +33,9 @@ import {
   createPlace,
   createRecipient,
   createRule,
+  getPlace,
+  setPlaceZone,
+  updatePlace,
 } from './services/repos.js';
 import { notionItems } from './db/schema.js';
 import { queryEvents } from './services/events.js';
@@ -520,6 +529,100 @@ describe('groups and multi-shop items', () => {
     expect(dm.map((i) => i.name)).toEqual(['Soap']);
     const lidl = await notion.itemsForPlace({ notion_shop: 'Lidl' });
     expect(lidl.map((i) => i.name)).toEqual(['Milk', 'Soap']);
+  });
+});
+
+/** In-memory stand-in for the HA zone collection: ids are slugified names, deduplicated like HA. */
+class FakeHaZones {
+  zones = new Map<string, HaZone>();
+  async listZones(): Promise<HaZone[]> {
+    return [...this.zones.values()];
+  }
+  async createZone(input: HaZoneInput): Promise<HaZone> {
+    const base = haSlugify(input.name);
+    let id = base;
+    for (let n = 2; this.zones.has(id); n++) id = `${base}_${n}`;
+    const zone = { id, ...input };
+    this.zones.set(id, zone);
+    return zone;
+  }
+  async updateZone(id: string, input: HaZoneInput): Promise<HaZone> {
+    if (!this.zones.has(id)) throw new Error('not_found');
+    const zone = { id, ...input };
+    this.zones.set(id, zone);
+    return zone;
+  }
+  async deleteZone(id: string): Promise<void> {
+    if (!this.zones.delete(id)) throw new Error('not_found');
+  }
+}
+
+describe('Home Assistant zone sync', () => {
+  const ha = new FakeHaZones();
+  class TestZoneSync extends ZoneSync {
+    override async client() {
+      return ha as unknown as HomeAssistantClient;
+    }
+  }
+  const lidl = {
+    ...LIDL,
+    enter_radius_m: 100,
+    approach_radius_m: 500,
+    dwell_seconds: 60,
+    icon: 'mdi:cart',
+    color: '#ff0000',
+    active: true,
+    notion_shop: 'Lidl',
+    notion_min_items: 1,
+    message_template: '{count}',
+    notion_url: null,
+  };
+
+  it('a place created with a duplicate name gets its own zone, and a shared zone id is repaired', async () => {
+    ha.zones.clear();
+    const sync = new TestZoneSync(db, secrets, config, createLogger(config));
+    const a = await sync.syncPlace(await createPlace(db, { ...lidl, name: 'Lidl' }));
+    expect(a.ha_zone_id).toBe('gr_lidl');
+    expect(a.ha_zone_entity_id).toBe('zone.gr_lidl');
+
+    // Second place with the same name: must not adopt the first place's zone.
+    const b0 = await createPlace(db, { ...lidl, name: 'Lidl', lat: 44.43, lng: 26.16 });
+    const b = await sync.syncPlace(b0);
+    expect(b.ha_zone_id).toBe('gr_lidl_2');
+    expect(ha.zones.get('gr_lidl')?.latitude).toBe(LIDL.lat);
+
+    // Renaming it renames its own zone only.
+    const b1 = await sync.syncPlace(
+      await updatePlace(db, b.id, { ...lidl, name: 'Lidl Buna Ziua', lat: 44.43, lng: 26.16 }),
+    );
+    expect(b1.ha_zone_id).toBe('gr_lidl_2');
+    expect(b1.ha_zone_entity_id).toBe('zone.gr_lidl_2'); // HA keeps the entity id across renames
+    expect(ha.zones.get('gr_lidl_2')?.name).toBe('GR Lidl Buna Ziua');
+    expect(ha.zones.get('gr_lidl')?.name).toBe('GR Lidl');
+
+    // Repair of the pre-fix corruption: both places bound to gr_lidl, zone renamed to the newer place.
+    ha.zones.delete('gr_lidl_2');
+    await ha.updateZone('gr_lidl', {
+      ...ha.zones.get('gr_lidl')!,
+      name: 'GR Lidl Buna Ziua',
+      latitude: 44.43,
+    });
+    await setPlaceZone(db, b.id, {
+      ha_zone_id: 'gr_lidl',
+      ha_zone_entity_id: 'zone.gr_lidl_buna_ziua',
+      error: null,
+    });
+    const summary = await sync.syncAll();
+    expect(summary.errors).toEqual([]);
+    const [a2, b2] = [await getPlace(db, a.id), await getPlace(db, b.id)];
+    expect(a2.ha_zone_id).toBe('gr_lidl');
+    expect(ha.zones.get('gr_lidl')).toMatchObject({ name: 'GR Lidl', latitude: LIDL.lat });
+    expect(b2.ha_zone_id).toBe('gr_lidl_buna_ziua');
+    expect(b2.ha_zone_entity_id).toBe('zone.gr_lidl_buna_ziua');
+    expect(ha.zones.get('gr_lidl_buna_ziua')).toMatchObject({
+      name: 'GR Lidl Buna Ziua',
+      latitude: 44.43,
+    });
   });
 });
 

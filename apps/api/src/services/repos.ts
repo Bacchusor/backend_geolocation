@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
 import type {
   Channel,
   ChannelInput,
@@ -116,6 +116,18 @@ export async function deletePlace(db: Db, id: string): Promise<Place> {
   const [row] = await db.delete(places).where(eq(places.id, id)).returning();
   if (!row) throw new NotFoundError('place', id);
   return rowToPlace(row);
+}
+
+/** Zone bindings of every other place: used to keep one zone per place during sync. */
+export async function zoneBindingsOfOtherPlaces(
+  db: Db,
+  placeId: string,
+): Promise<Array<{ ha_zone_id: string; created_at: Date }>> {
+  const rows = await db
+    .select({ ha_zone_id: places.ha_zone_id, created_at: places.created_at })
+    .from(places)
+    .where(and(ne(places.id, placeId), isNotNull(places.ha_zone_id)));
+  return rows.filter((r): r is { ha_zone_id: string; created_at: Date } => r.ha_zone_id !== null);
 }
 
 export async function setPlaceZone(
