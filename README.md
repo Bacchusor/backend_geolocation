@@ -135,8 +135,11 @@ Also keep the stack's environment variables: without `ENCRYPTION_KEY` the stored
    (the admin lists them from `/api/services`). "Send test" checks the push path.
 3. Saving a place creates/updates the zone `zone.gr_<place>` in HA (Settings → Areas & zones → Zones). The
    Companion app registers OS geofences for HA zones, which is what drives the zone events below.
-4. Forward positions and zone events with a `rest_command` and two automations (`configuration.yaml` /
-   `secrets.yaml`):
+4. Forward positions and zone events with a `rest_command` and two automations. Pre-production keeps them in
+   `/config/georeminder_rest_commands.yaml` and `/config/georeminder_automations.yaml`, loaded from
+   `configuration.yaml` with `rest_command: !include georeminder_rest_commands.yaml` and
+   `automation georeminder: !include georeminder_automations.yaml` (separate from the UI-managed
+   `automations.yaml`). Equivalent inline form:
 
 ```yaml
 # secrets.yaml
