@@ -627,7 +627,7 @@ describe('Home Assistant zone sync', () => {
   });
 
   it('zone events resolve by the zone name HA sends, even when entity ids diverge from names', async () => {
-    const a = await createPlace(db, { ...lidl, name: 'Lidl' });
+    const a = await getPlace(db, placeId); // the "Lidl" from beforeEach
     const b = await createPlace(db, { ...lidl, name: 'Lidl Buna Ziua', lat: 44.43, lng: 26.16 });
     // Pre-production after the repair: the older place kept the id derived from the other's name.
     await setPlaceZone(db, b.id, {
