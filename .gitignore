@@ -16,3 +16,6 @@ Thumbs.db
 # Homelab docs copied from the homelab-monitoring repo for context; they belong there.
 docs/0[0-9]-*.md
 docs/inventory-*.txt
+
+# Generated API reference snapshots (openapi.json/.md/.html); the live docs are at /docs
+docs/api-reference/
