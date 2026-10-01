@@ -116,6 +116,12 @@ with tags `pre` (main), `<branch>` and `sha-<short>`.
 
 Equivalent CLI deploy: `scripts/deploy-preprod.sh` (ssh + `docker compose up -d` in `/opt/georeminder`).
 
+**Production** (since 2026-10-01) runs on `portainer-home` (192.168.1.152) from the private `homelab-monitoring`
+repo, `apps/georeminder/docker-compose.yml`: API on host port 3300, admin on 3080, PostgreSQL data in
+`/opt/georeminder/pgdata`, secrets in `apps/georeminder/.env` on that host. Promote by fast-forwarding `main`,
+waiting for CI, then setting `IMAGE_TAG=sha-<short>` there and `docker compose … up -d` (the API migrates at
+start; back up pgdata first). Home Assistant's rest_commands target production; the Pi stays pre-production.
+
 ### Backups
 
 ```bash
