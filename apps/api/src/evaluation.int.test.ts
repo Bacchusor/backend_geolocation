@@ -33,6 +33,7 @@ import {
   createPlace,
   createRecipient,
   createRule,
+  findPlaceByZone,
   getPlace,
   setPlaceZone,
   updatePlace,
@@ -623,6 +624,27 @@ describe('Home Assistant zone sync', () => {
       name: 'GR Lidl Buna Ziua',
       latitude: 44.43,
     });
+  });
+
+  it('zone events resolve by the zone name HA sends, even when entity ids diverge from names', async () => {
+    const a = await createPlace(db, { ...lidl, name: 'Lidl' });
+    const b = await createPlace(db, { ...lidl, name: 'Lidl Buna Ziua', lat: 44.43, lng: 26.16 });
+    // Pre-production after the repair: the older place kept the id derived from the other's name.
+    await setPlaceZone(db, b.id, {
+      ha_zone_id: 'gr_lidl',
+      ha_zone_entity_id: 'zone.gr_lidl',
+      error: null,
+    });
+    await setPlaceZone(db, a.id, {
+      ha_zone_id: 'gr_lidl_2',
+      ha_zone_entity_id: 'zone.gr_lidl_2',
+      error: null,
+    });
+    expect((await findPlaceByZone(db, 'GR Lidl', 'GR'))?.id).toBe(a.id);
+    expect((await findPlaceByZone(db, 'GR Lidl Buna Ziua', 'GR'))?.id).toBe(b.id);
+    expect((await findPlaceByZone(db, 'zone.gr_lidl_2', 'GR'))?.id).toBe(a.id);
+    expect((await findPlaceByZone(db, 'gr_lidl', 'GR'))?.id).toBe(b.id);
+    expect((await findPlaceByZone(db, 'Lidl', 'GR'))?.id).toBe(a.id);
   });
 });
 

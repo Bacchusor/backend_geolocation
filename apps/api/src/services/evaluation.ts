@@ -41,6 +41,7 @@ export interface EvaluationDeps {
     | 'TZ'
     | 'MAX_SPEED_MPS'
     | 'MAX_FIX_AGE_HOURS'
+    | 'HA_ZONE_PREFIX'
     | 'EXIT_HYSTERESIS_FACTOR'
     | 'LOCATION_MIN_INTERVAL_SECONDS'
   >;
@@ -157,11 +158,11 @@ export class Evaluator {
   }
 
   async processGeofenceEvent(ev: GeofenceEvent): Promise<FixResult> {
-    const { db, log } = this.deps;
+    const { db, log, config } = this.deps;
     const now = this.now();
     const place = ev.place_id
       ? await getPlace(db, ev.place_id).catch(() => null)
-      : await findPlaceByZone(db, ev.zone!);
+      : await findPlaceByZone(db, ev.zone!, config.HA_ZONE_PREFIX);
     if (!place) {
       const reason = `unknown place ${ev.place_id ?? ev.zone}`;
       await logEvent(db, {

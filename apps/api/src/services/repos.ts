@@ -147,17 +147,21 @@ export async function setPlaceZone(
 }
 
 /**
- * Resolve a Home Assistant zone reference to a place. Accepts the zone entity id (`zone.gr_lidl`),
- * the zone's friendly name (`GR Lidl`, what a device_tracker state shows), the place name, or the HA zone storage id.
+ * Resolve a Home Assistant zone reference to a place. Accepts the HA zone storage id, the zone's
+ * friendly name (`GR Lidl`, what a device_tracker state shows and the automations send), the place
+ * name, or the zone entity id (`zone.gr_lidl`). The name is matched before the entity id: HA keeps
+ * entity ids from the zone's creation, so after renames they no longer follow the name.
  */
-export async function findPlaceByZone(db: Db, zone: string): Promise<Place | null> {
+export async function findPlaceByZone(db: Db, zone: string, prefix = ''): Promise<Place | null> {
   const z = zone.trim();
   const slug = haSlugify(z.replace(/^zone\./, ''));
+  const prefixSlug = prefix.trim() ? `${haSlugify(prefix)}_` : '';
+  const nameSlug = prefixSlug && slug.startsWith(prefixSlug) ? slug.slice(prefixSlug.length) : slug;
   const all = await db.select().from(places);
   const row =
     all.find((p) => p.ha_zone_id === z) ??
+    all.find((p) => haSlugify(p.name) === nameSlug) ??
     all.find((p) => p.ha_zone_entity_id === `zone.${slug}`) ??
-    all.find((p) => haSlugify(p.name) === slug) ??
     all.find(
       (p) =>
         p.ha_zone_entity_id &&
