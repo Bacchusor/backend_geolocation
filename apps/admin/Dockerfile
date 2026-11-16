@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Build context: repository root. Static build served by unprivileged nginx (port 8080), /api proxied to the API.
-ARG NODE_IMAGE=node:22-alpine
+ARG NODE_IMAGE=node:22.23.5-alpine
 ARG PNPM_VERSION=10.17.1
 
 FROM ${NODE_IMAGE} AS build
