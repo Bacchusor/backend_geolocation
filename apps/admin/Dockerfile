@@ -16,7 +16,7 @@ COPY packages/shared packages/shared
 COPY apps/admin apps/admin
 RUN pnpm --filter @georeminder/shared build && pnpm --filter @georeminder/admin build
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.30.6-alpine
 COPY apps/admin/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/admin/dist /usr/share/nginx/html
 EXPOSE 8080
